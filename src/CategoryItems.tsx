@@ -111,8 +111,8 @@ const styles = StyleSheet.create({
     color: '#000',
   },
   content: {
-    paddingHorizontal: 24,
-    paddingVertical: 32,
+    paddingHorizontal: 16,
+    paddingVertical: 48,
     paddingBottom: 120,
   },
   grid: {
@@ -133,6 +133,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-around',
     maxWidth: 400,
     marginHorizontal: 'auto',
+    gap: 32,
   },
   navButton: {
     padding: 12,

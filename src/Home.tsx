@@ -106,8 +106,11 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   logo: {
+    marginTop: 40,
     width: 300,
-    height: 100,
+    height: 175,
+    shadowColor: '#4400ffff',
+    shadowOpacity: 0.1,
   },
   mainContent: {
     flex: 1,
@@ -147,6 +150,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-around',
     maxWidth: 400,
     marginHorizontal: 'auto',
+    gap: 32,
   },
   navButton: {
     padding: 16,
