@@ -5,9 +5,14 @@ import {
   TouchableOpacity,
   StyleSheet,
   ScrollView,
+  Alert,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { ArrowLeft, User, Edit, Home } from 'lucide-react-native';
+import { logout } from "./services/auth";
+import { useAuth } from "./contexts/AuthContext";
+import { buscarPerfil } from "./services/auth";
+import { useEffect, useState } from "react";
 
 const Profile = () => {
   const navigation = useNavigation();
@@ -24,6 +29,30 @@ const Profile = () => {
     // Solução para TypeScript
     (navigation as any).navigate('Home');
   };
+
+  const { user } = useAuth();
+  const [perfil, setPerfil] = useState<any>(null);
+
+  useEffect(() => {
+    async function loadPerfil() {
+      if (user) {
+        const p = await buscarPerfil(user.id);
+        setPerfil(p);
+      }
+    }
+    loadPerfil();
+  }, [user]);
+
+
+  async function handleLogout() {
+    try{
+      await logout();
+      Alert.alert("Você saiu da conta.");
+      (navigation as any).navigation("Home");
+    }catch(error: any){
+      Alert.alert("Erro ao sair", error.message);
+    }
+  }
 
   return (
     <View style={styles.container}>
@@ -52,8 +81,10 @@ const Profile = () => {
             </View>
           </View>
           
-          <Text style={styles.userName}>Usuário</Text>
-          <Text style={styles.userRole}>Criança em desenvolvimento</Text>
+          <Text style={styles.userName}>{perfil?.nome || "Usuário"}</Text>
+          <Text style={styles.userRole}>{perfil?.telefone || "Telefone não informado"}</Text>
+          <Text style={styles.userRole}>{perfil?.data_nascimento || ""}</Text>
+
           
           <TouchableOpacity
             onPress={handleEditProfile}
@@ -62,6 +93,15 @@ const Profile = () => {
           >
             <Edit size={20} color="white" />
             <Text style={styles.editButtonText}>Editar Perfil</Text>
+          </TouchableOpacity>
+        </View>
+
+        <View style={styles.logoutCard}>
+          <TouchableOpacity
+            onPress={handleLogout}
+            style={styles.logoutButton}
+          >
+            <Text style={styles.logoutText}>Sair da conta</Text>
           </TouchableOpacity>
         </View>
 
@@ -178,6 +218,27 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     color: 'white',
+  },
+   logoutCard: {
+    backgroundColor: "white",
+    padding: 20,
+    borderRadius: 20,
+    elevation: 5,
+    alignItems: "center",
+    marginBottom: 20,
+  },
+
+  logoutButton: {
+    paddingVertical: 12,
+    paddingHorizontal: 30,
+    backgroundColor: "#d9534f",
+    borderRadius: 999,
+  },
+
+  logoutText: {
+    color: "white",
+    fontWeight: "bold",
+    fontSize: 16,
   },
   settingsCard: {
     backgroundColor: 'white',

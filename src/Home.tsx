@@ -10,6 +10,8 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import { useNavigation } from '@react-navigation/native';
 import { User, Home as HomeIcon, Edit } from 'lucide-react-native';
+import { useAuth } from "./contexts/AuthContext";
+
 
 const Home = () => {
   const navigation = useNavigation();
@@ -29,6 +31,17 @@ const Home = () => {
   const handleHome = () => {
     (navigation as any).navigate('Home');
   };
+
+  const { user } = useAuth();
+
+  const handleCriarGesto = () => {
+    if (!user) {
+      (navigation as any).navigate("Login"); // ou "Login" se você tiver a tela
+      return;
+    }
+    (navigation as any).navigate("CadastrarGesto");
+};
+
 
   return (
     <LinearGradient
@@ -56,6 +69,15 @@ const Home = () => {
           accessibilityLabel="Eu quero falar"
         >
           <Text style={styles.mainButtonText}>Eu quero falar</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          onPress={handleCriarGesto}
+          style={[styles.mainButton, { backgroundColor: "#9B3FA3", marginTop: 20 }]}
+          activeOpacity={0.7}
+          accessibilityLabel="Criar Gesto"
+        >
+          <Text style={styles.mainButtonText}>Criar Gesto</Text>
         </TouchableOpacity>
       </View>
 
