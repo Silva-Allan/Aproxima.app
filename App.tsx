@@ -1,3 +1,11 @@
 // App.tsx na raiz
 import App from './app/index';
-export default App;
+import { AuthProvider } from "./src/contexts/AuthContext";
+
+export default function Main() {
+  return (
+    <AuthProvider>
+      <App />
+    </AuthProvider>
+  );
+}
