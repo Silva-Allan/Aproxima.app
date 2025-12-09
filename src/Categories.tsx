@@ -2,6 +2,7 @@ import React from "react";
 import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Dimensions } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import {
+  ArrowLeft,
   Baby,
   Hand,
   Smile,
@@ -74,19 +75,11 @@ export default function Categories() {
         <TouchableOpacity 
           style={styles.navButton} 
           activeOpacity={0.7}
-          onPress={() => navigation.goBack()}
-        >
-          <View style={styles.circleIcon} />
-        </TouchableOpacity>
-
-        <TouchableOpacity 
-          style={styles.navButton} 
-          activeOpacity={0.7}
           onPress={() => navigation.navigate("Settings" as never)}
         >
           <View style={styles.settingsWrapper}>
             <View style={styles.settingsIcon}>
-              <View style={styles.settingsCircle} />
+              <ArrowLeft size={32} color="white" strokeWidth={2.5} />
             </View>
           </View>
         </TouchableOpacity>
@@ -102,7 +95,7 @@ const styles = StyleSheet.create({
   },
 
   header: {
-    paddingTop: 32,
+    paddingTop: 48,
     paddingBottom: 24,
     paddingHorizontal: 24,
     alignItems: "center",
@@ -131,7 +124,7 @@ const styles = StyleSheet.create({
   },
 
   content: {
-    paddingHorizontal: 24,
+    paddingHorizontal: 16,
     paddingBottom: 120,
   },
 
