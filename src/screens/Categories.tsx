@@ -1,18 +1,18 @@
-import React from "react";
-import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Dimensions } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import {
-  ArrowLeft,
-  Baby,
-  Hand,
-  Smile,
-  Droplets,
-  ThumbsUp,
-  MessageSquare,
-  Home,
+    ArrowLeft,
+    Baby,
+    Droplets,
+    Hand,
+    Home,
+    MessageSquare,
+    Smile,
+    ThumbsUp,
 } from "lucide-react-native";
+import React from "react";
+import { Dimensions, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 
-import CategoryButton from "../components/CategoryButton";
+import CategoryButton from "../../components/CategoryButton";
 
 export default function Categories() {
   const navigation = useNavigation();

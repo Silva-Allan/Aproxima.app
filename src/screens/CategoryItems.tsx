@@ -1,16 +1,16 @@
+import { useNavigation, useRoute } from '@react-navigation/native';
+import { ArrowLeft, Home } from 'lucide-react-native';
 import React from 'react';
 import {
-  View,
-  Text,
-  ScrollView,
-  StyleSheet,
-  Dimensions,
-  TouchableOpacity,
+    Dimensions,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
 } from 'react-native';
-import { useNavigation, useRoute } from '@react-navigation/native';
-import { Home, ArrowLeft } from 'lucide-react-native';
-import ItemCard from '../components/ItemCard';
-import { categoryData } from '../utils/categoryData';
+import ItemCard from '../../components/ItemCard';
+import { categoryData } from '../../utils/categoryData';
 
 /**
  * Tela de itens da categoria - Estilo Figma

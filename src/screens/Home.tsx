@@ -1,16 +1,15 @@
+import { useNavigation } from '@react-navigation/native';
+import { LinearGradient } from 'expo-linear-gradient';
+import { Edit, Home as HomeIcon, User } from 'lucide-react-native';
 import React from 'react';
 import {
-  View,
-  Text,
-  TouchableOpacity,
-  StyleSheet,
-  Dimensions,
-  Image,
+    Image,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View
 } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
-import { useNavigation } from '@react-navigation/native';
-import { User, Home as HomeIcon, Edit } from 'lucide-react-native';
-import { useAuth } from "./contexts/AuthContext";
+import { useAuth } from "../contexts/AuthContext";
 
 
 const Home = () => {
@@ -54,7 +53,7 @@ const Home = () => {
       <View style={styles.header}>
         {/* Use require() que é mais confiável */}
         <Image 
-          source={require('../assets/images/LogoAproximaPng.png')} 
+          source={require('@/assets/images/LogoAproximaPng.png')} 
           style={styles.logo} 
           resizeMode="contain"
         />

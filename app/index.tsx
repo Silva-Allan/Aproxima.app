@@ -1,19 +1,19 @@
 // app/index.tsx
-import React from "react";
 import { NavigationContainer } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
+import React from "react";
 
 // Importe suas telas do src/
-import Home from "../src/Home";
-import Categories from "../src/Categories";
-import CategoryItems from "../src/CategoryItems";
+import NotFound from "../src/screens/NotFound";
+import Profile from "../src/screens/Profile";
 import CadastrarGesto from "../src/screens/CadastrarGesto";
-import Choices from "../src/Choices";
-import Profile from "../src/Profile";
-import LoginScreen from "../src/screens/Login";
 import CadastroScreen from "../src/screens/Cadastro";
-import Settings from "../src/Settings";
-import NotFound from "../src/NotFound";
+import Categories from "../src/screens/Categories";
+import CategoryItems from "../src/screens/CategoryItems";
+import Choices from "../src/screens/Choices";
+import Home from "../src/screens/Home";
+import LoginScreen from "../src/screens/Login";
+import Settings from "../src/screens/Settings";
 
 const Stack = createNativeStackNavigator();
 
