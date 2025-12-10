@@ -115,7 +115,6 @@ const Home = () => {
   );
 };
 
-// Remova o logoPlaceholder e logoText dos estilos se não vai usar
 const styles = StyleSheet.create({
   container: {
     flex: 1,

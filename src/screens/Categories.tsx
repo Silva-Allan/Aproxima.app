@@ -1,25 +1,129 @@
 import { useNavigation } from "@react-navigation/native";
 import {
     ArrowLeft,
-    Baby,
     Droplets,
     Hand,
     Home,
     MessageSquare,
     Smile,
     ThumbsUp,
+    Apple, // Adicionei Apple como ícone de comida
+    Pizza,
+    IceCream,
+    Cookie,
+    Milk,
+    Coffee,
+    Heart as HeartHand,
+    Eye,
+    Ear,
+    Heart,
+    Frown,
+    Laugh,
+    Angry,
+    Meh,
+    Zap,
+    Sun,
+    Moon,
+    Wind,
+    Thermometer,
+    Home as HomeWord,
+    Bed,
+    Toilet,
+    Bath,
+    School,
+    Car,
 } from "lucide-react-native";
 import React from "react";
 import { Dimensions, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 
 import CategoryButton from "../../components/CategoryButton";
 
+// Interface para os itens das categorias
+export interface CategoryItem {
+  icon: React.ComponentType<any>;
+  label: string;
+}
+
+// Interface para as categorias
+export interface Category {
+  id: string;
+  name: string;
+  items: CategoryItem[];
+}
+
+// Dados das categorias
+// src/screens/Categories.tsx - ATUALIZE OS IDs
+export const categoryData: Category[] = [
+  {
+    id: "comidas", // ← String simples, não UUID
+    name: "Comidas",
+    items: [
+      { icon: Pizza, label: "FRANGO" },
+      { icon: Pizza, label: "CARNE" },
+      { icon: Apple, label: "ARROZ" },
+      { icon: IceCream, label: "SALADA" },
+      { icon: Apple, label: "TOMATE" },
+      { icon: Cookie, label: "PÃO" },
+      { icon: Apple, label: "BANANA" },
+      { icon: IceCream, label: "MORANGO" },
+    ],
+  },
+  {
+    id: "gestos", // ← String simples
+    name: "Gestos",
+    items: [
+      { icon: ThumbsUp, label: "Positivo" },
+      { icon: Hand, label: "Parar" },
+      { icon: Smile, label: "Oi/Tchau" },
+      { icon: HeartHand, label: "Amor" },
+      { icon: Eye, label: "Ver" },
+      { icon: Ear, label: "Ouvir" },
+    ],
+  },
+  {
+    id: "sentimentos", // ← String simples
+    name: "Sentimentos",
+    items: [
+      { icon: Heart, label: "Te amo" },
+      { icon: Smile, label: "Feliz" },
+      { icon: Frown, label: "Triste" },
+      { icon: Laugh, label: "Alegre" },
+      { icon: Angry, label: "Bravo" },
+      { icon: Meh, label: "Normal" },
+    ],
+  },
+  {
+    id: "sensacoes", // ← String simples
+    name: "Sensações",
+    items: [
+      { icon: Droplets, label: "Água/Sede" },
+      { icon: Zap, label: "Energia" },
+      { icon: Sun, label: "Calor" },
+      { icon: Moon, label: "Sono" },
+      { icon: Wind, label: "Frio" },
+      { icon: Thermometer, label: "Febre" },
+    ],
+  },
+  {
+    id: "essenciais", // ← String simples
+    name: "Palavras Essenciais",
+    items: [
+      { icon: HomeWord, label: "Casa" },
+      { icon: Bed, label: "Cama" },
+      { icon: Toilet, label: "Banheiro" },
+      { icon: Bath, label: "Banho" },
+      { icon: School, label: "Escola" },
+      { icon: Car, label: "Carro" },
+    ],
+  },
+];
+
 export default function Categories() {
   const navigation = useNavigation();
 
-  // Atualizei os routes para corresponder aos nomes das telas no seu Stack Navigator
+  // Use Apple como ícone de comida
   const categories = [
-    { icon: Baby, label: "COMIDAS", route: "CategoryItems", params: { categoryId: "comidas" } },
+    { icon: Apple, label: "COMIDAS", route: "CategoryItems", params: { categoryId: "comidas" } },
     { icon: Hand, label: "GESTOS", route: "CategoryItems", params: { categoryId: "gestos" } },
     { icon: Smile, label: "SENTIMENTOS", route: "CategoryItems", params: { categoryId: "sentimentos" } },
     { icon: Droplets, label: "SENSAÇÕES", route: "CategoryItems", params: { categoryId: "sensacoes" } },

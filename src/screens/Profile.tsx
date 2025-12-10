@@ -26,12 +26,17 @@ import {
   Loader2,
   Image as ImageIcon,
   X,
+  LogOut, // ✅ Adicionado
+  Shield, // ✅ Adicionado
+  AlertCircle, // ✅ Adicionado
 } from 'lucide-react-native';
 import { buscarPerfilUsuario, atualizarPerfil, UserProfile } from '../services/auth';
 import { UploadService } from '../services/upload';
+import { useAuth } from '../contexts/AuthContext'; // ✅ Corrigido: removido singOut
 
 const EditProfile = () => {
   const navigation = useNavigation();
+  const { signOut } = useAuth(); // ✅ Corrigido: use signOut (com 'n') do AuthContext
 
   // Estados para os campos do perfil
   const [nome, setNome] = useState('');
@@ -158,6 +163,80 @@ const EditProfile = () => {
 
   const handleBack = () => {
     navigation.goBack();
+  };
+
+  // ✅ FUNÇÃO DE LOGOUT CORRIGIDA
+  const handleLogout = () => {
+    Alert.alert(
+      'Sair da Conta',
+      'Tem certeza que deseja sair da sua conta?',
+      [
+        {
+          text: 'Cancelar',
+          style: 'cancel',
+        },
+        {
+          text: 'Sair',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              setIsSaving(true);
+              await signOut(); // ✅ Agora está correto
+              // O AuthContext já deve redirecionar automaticamente para Login
+            } catch (error: any) {
+              console.error('Erro ao fazer logout:', error);
+              Alert.alert(
+                'Erro',
+                'Não foi possível sair da conta. Tente novamente.'
+              );
+            } finally {
+              setIsSaving(false);
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  // FUNÇÃO PARA EXCLUIR CONTA (opcional)
+  const handleDeleteAccount = () => {
+    Alert.alert(
+      'Excluir Conta',
+      '⚠️ ATENÇÃO: Esta ação é irreversível!\n\nTodos os seus dados, gestos e informações serão permanentemente excluídos.',
+      [
+        {
+          text: 'Cancelar',
+          style: 'cancel',
+        },
+        {
+          text: 'Excluir Conta',
+          style: 'destructive',
+          onPress: () => {
+            Alert.alert(
+              'Confirmação Final',
+              'Tem certeza ABSOLUTA que deseja excluir sua conta? Esta ação não pode ser desfeita.',
+              [
+                {
+                  text: 'Cancelar',
+                  style: 'cancel',
+                },
+                {
+                  text: 'EXCLUIR CONTA',
+                  style: 'destructive',
+                  onPress: () => {
+                    // Aqui você implementaria a exclusão da conta
+                    Alert.alert(
+                      'Funcionalidade em desenvolvimento',
+                      'A exclusão de conta estará disponível em breve.'
+                    );
+                  },
+                },
+              ]
+            );
+          },
+        },
+      ]
+    );
   };
 
   const handleChangePhoto = async () => {
@@ -522,13 +601,55 @@ const EditProfile = () => {
             )}
           </View>
         </View>
+
+        {/* ✅ SEÇÃO: Configurações de Segurança e Conta */}
+        <View style={styles.securitySection}>
+          <Text style={styles.securityTitle}>Segurança e Conta</Text>
+
+          {/* Botão de Logout */}
+          <TouchableOpacity
+            style={[styles.logoutButton, (isSaving || isUploading) && styles.buttonDisabled]}
+            onPress={handleLogout}
+            activeOpacity={0.7}
+            disabled={isSaving || isUploading}
+          >
+            <LogOut size={20} color="#ff4444" style={styles.buttonIcon} />
+            <Text style={styles.logoutButtonText}>Sair da Conta</Text>
+          </TouchableOpacity>
+
+          {/* Botão para Excluir Conta (opcional) */}
+          <TouchableOpacity
+            style={[styles.deleteAccountButton, (isSaving || isUploading) && styles.buttonDisabled]}
+            onPress={handleDeleteAccount}
+            activeOpacity={0.7}
+            disabled={isSaving || isUploading}
+          >
+            <AlertCircle size={20} color="#ff4444" style={styles.buttonIcon} />
+            <Text style={styles.deleteAccountText}>Excluir Minha Conta</Text>
+          </TouchableOpacity>
+
+          {/* Informações de segurança */}
+          <View style={styles.securityInfo}>
+            <View style={styles.securityInfoHeader}>
+              <Shield size={20} color="#8BC5E5" />
+              <Text style={styles.securityInfoTitle}>Suas Informações estão Seguras</Text>
+            </View>
+            <Text style={styles.securityInfoText}>
+              • Dados protegidos por criptografia{'\n'}
+              • Nenhuma informação é compartilhada com terceiros{'\n'}
+              • Você pode excluir sua conta a qualquer momento
+            </Text>
+          </View>
+        </View>
+
+        {/* Espaço extra para scroll */}
+        <View style={styles.bottomSpacer} />
       </ScrollView>
     </KeyboardAvoidingView>
   );
 };
 
 // Estilos
-// src/screens/EditProfile.tsx - ESTILOS COMPLETOS
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -739,20 +860,6 @@ const styles = StyleSheet.create({
     paddingTop: 16,
     paddingBottom: 16,
   },
-  changePasswordButton: {
-    backgroundColor: 'rgba(139, 197, 229, 0.1)',
-    borderRadius: 12,
-    padding: 16,
-    alignItems: 'center',
-    marginTop: 8,
-    borderWidth: 1,
-    borderColor: 'rgba(139, 197, 229, 0.3)',
-  },
-  changePasswordText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#8BC5E5',
-  },
   infoSection: {
     marginBottom: 24,
   },
@@ -801,6 +908,91 @@ const styles = StyleSheet.create({
     color: '#666',
     fontFamily: 'monospace',
   },
+  // ✅ NOVOS ESTILOS PARA A SEÇÃO DE SEGURANÇA
+  securitySection: {
+    marginTop: 8,
+    marginBottom: 40,
+  },
+  securityTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#666',
+    marginBottom: 16,
+    paddingLeft: 8,
+  },
+  logoutButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255, 68, 68, 0.1)',
+    borderRadius: 12,
+    padding: 18,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 68, 68, 0.2)',
+  },
+  deleteAccountButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255, 68, 68, 0.05)',
+    borderRadius: 12,
+    padding: 18,
+    marginBottom: 24,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 68, 68, 0.1)',
+    borderStyle: 'dashed',
+  },
+  buttonDisabled: {
+    opacity: 0.5,
+  },
+  buttonIcon: {
+    marginRight: 12,
+  },
+  logoutButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#ff4444',
+    flex: 1,
+  },
+  deleteAccountText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#ff4444',
+    flex: 1,
+    opacity: 0.8,
+  },
+  securityInfoHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  securityInfoTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#333',
+    marginLeft: 8,
+  },
+  securityInfoText: {
+    fontSize: 14,
+    color: '#666',
+    lineHeight: 20,
+  },
+  bottomSpacer: {
+    height: 40,
+  },
+  changePasswordButton: {
+    backgroundColor: 'rgba(139, 197, 229, 0.1)',
+    borderRadius: 12,
+    padding: 16,
+    alignItems: 'center',
+    marginTop: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(139, 197, 229, 0.3)',
+  },
+  changePasswordText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#8BC5E5',
+  },
   securityInfo: {
     backgroundColor: 'rgba(139, 197, 229, 0.1)',
     borderRadius: 12,
@@ -808,12 +1000,6 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: 'rgba(139, 197, 229, 0.2)',
     marginTop: 8,
-  },
-  securityTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#333',
-    marginBottom: 8,
   },
   securityText: {
     fontSize: 14,

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -7,69 +7,79 @@ import {
   ScrollView,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import { ArrowLeft, Volume2, Palette, Type, Home } from 'lucide-react-native';
+import {
+  ArrowLeft,
+  Home,
+  Plus,
+  FolderPlus,
+  List,
+} from 'lucide-react-native';
+import { useAuth } from '../contexts/AuthContext';
 
 const Settings = () => {
   const navigation = useNavigation();
+  const { user } = useAuth();
 
   const handleBack = () => {
     navigation.goBack();
   };
 
   const handleHome = () => {
-    // Solução para TypeScript
     (navigation as any).navigate('Home');
   };
 
-  const settingOptions = [
+  const handleCreateGesto = () => {
+    (navigation as any).navigate('CadastrarGesto');
+  };
+
+  const handleListGestos = () => {
+    (navigation as any).navigate('MeusGestos');
+  };
+
+  const mainOptions = [
     {
-      icon: Volume2,
-      title: 'Sons',
-      description: 'Configurar sons dos botões',
-      onPress: () => console.log('Abrir configurações de som'),
+      icon: Plus,
+      title: 'Criar Gesto',
+      description: 'Adicionar novo gesto personalizado',
+      onPress: handleCreateGesto,
+      color: '#8BC5E5',
     },
     {
-      icon: Palette,
-      title: 'Aparência',
-      description: 'Personalizar cores e imagens',
-      onPress: () => console.log('Abrir configurações de aparência'),
-    },
-    {
-      icon: Type,
-      title: 'Texto',
-      description: 'Tamanho e tipo de fonte',
-      onPress: () => console.log('Abrir configurações de texto'),
+      icon: List,
+      title: 'Meus Gestos',
+      description: 'Ver, editar ou excluir seus gestos',
+      onPress: handleListGestos,
+      color: '#8BC5E5',
     },
   ];
 
   return (
     <View style={styles.container}>
-      {/* Header com botão voltar */}
+      {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity
           onPress={handleBack}
           style={styles.backButton}
           activeOpacity={0.7}
-          accessibilityLabel="Voltar"
         >
           <ArrowLeft size={28} color="#8BC5E5" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Configurações</Text>
+        <Text style={styles.headerTitle}>Gerenciamento</Text>
       </View>
 
-      {/* Opções de configuração */}
-      <ScrollView 
+      {/* Opções principais */}
+      <ScrollView
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
       >
-        {settingOptions.map((option, index) => (
+        {mainOptions.map((option, index) => (
           <TouchableOpacity
             key={index}
-            style={styles.settingCard}
+            style={[styles.settingCard, { backgroundColor: option.color }]}
             activeOpacity={0.7}
             onPress={option.onPress}
           >
-            <option.icon size={40} color="#8BC5E5" />
+            <option.icon size={40} color="white" />
             <View style={styles.settingText}>
               <Text style={styles.settingTitle}>{option.title}</Text>
               <Text style={styles.settingDescription}>{option.description}</Text>
@@ -85,7 +95,6 @@ const Settings = () => {
             onPress={handleHome}
             style={styles.navButton}
             activeOpacity={0.7}
-            accessibilityLabel="Home"
           >
             <Home size={32} color="white" strokeWidth={2.5} />
           </TouchableOpacity>
@@ -98,12 +107,14 @@ const Settings = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#A8D8F0',
+    backgroundColor: '#ffffffff',
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingTop: 60,
+    justifyContent: 'flex-start',
+    gap: 16,
+    paddingTop: 40,
     paddingBottom: 20,
     paddingHorizontal: 24,
     backgroundColor: 'white',
@@ -120,12 +131,15 @@ const styles = StyleSheet.create({
     padding: 8,
     borderRadius: 999,
     backgroundColor: 'rgba(139, 197, 229, 0.1)',
+    alignSelf: 'flex-start',
+    marginTop: 16,
   },
   headerTitle: {
     fontSize: 28,
     fontWeight: 'bold',
-    color: '#8BC5E5',
-    marginLeft: 16,
+    color: '#000000ff',
+    marginTop: 16,
+    marginHorizontal: 16,
   },
   content: {
     paddingHorizontal: 24,
@@ -135,7 +149,6 @@ const styles = StyleSheet.create({
   settingCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'white',
     borderRadius: 32,
     shadowColor: '#000',
     shadowOffset: {
@@ -155,12 +168,12 @@ const styles = StyleSheet.create({
   settingTitle: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#333',
+    color: 'white',
     marginBottom: 4,
   },
   settingDescription: {
     fontSize: 14,
-    color: '#666',
+    color: 'rgba(255, 255, 255, 0.9)',
   },
   bottomNav: {
     position: 'absolute',
@@ -168,7 +181,9 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     padding: 24,
-    backgroundColor: '#A8D8F0',
+    backgroundColor: '#ffffffff',
+    flexDirection: 'row',
+    justifyContent: 'space-between'
   },
   navContent: {
     flexDirection: 'row',
@@ -179,7 +194,7 @@ const styles = StyleSheet.create({
   navButton: {
     padding: 12,
     borderRadius: 999,
-    backgroundColor: 'rgba(255, 255, 255, 0.6)',
+    backgroundColor: 'rgba(255, 27, 194, 0.6)',
   },
 });
 

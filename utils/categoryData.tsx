@@ -53,7 +53,7 @@ export const categoryData: Category[] = [
     id: "sentimentos",
     name: "Sentimentos",
     items: [
-      { icon: Heart, label: "Amor" },
+      { icon: Heart, label: "Te amo" },
       { icon: Smile, label: "Feliz" },
       { icon: Frown, label: "Triste" },
       { icon: Laugh, label: "Alegre" },
