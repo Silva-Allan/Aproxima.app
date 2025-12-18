@@ -179,6 +179,7 @@ const styles = StyleSheet.create({
     minHeight: 280,
   },
   imageContainer: {
+    paddingTop: 0,
     width: 120,
     height: 120,
     borderRadius: 20,
