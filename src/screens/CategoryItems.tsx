@@ -18,7 +18,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import ItemCard from '../../components/ItemCard';
-import { categoryData } from './Categories'; // Importa do arquivo Categories
+import { categoryData } from './Categories';
 import { buscarGestosPorCategoria, Gesto } from '../services/gestos';
 
 // Ajuste a interface para usar o tipo Gesto do serviço
@@ -366,7 +366,7 @@ const styles = StyleSheet.create({
   },
   categoryHeader: {
     backgroundColor: 'white',
-    paddingTop: 30,
+    paddingTop: 20,
     paddingBottom: 20,
     paddingHorizontal: 16,
     borderBottomLeftRadius: 24,
