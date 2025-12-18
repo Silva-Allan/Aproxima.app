@@ -1,37 +1,74 @@
 import { useNavigation } from "@react-navigation/native";
 import {
-    ArrowLeft,
-    Droplets,
-    Hand,
-    Home,
-    MessageSquare,
-    Smile,
-    ThumbsUp,
-    Apple, // Adicionei Apple como ícone de comida
-    Pizza,
-    IceCream,
-    Cookie,
-    Milk,
-    Coffee,
-    Heart as HeartHand,
-    Eye,
-    Ear,
-    Heart,
-    Frown,
-    Laugh,
-    Angry,
-    Meh,
-    Zap,
-    Sun,
-    Moon,
-    Wind,
-    Thermometer,
-    Home as HomeWord,
-    Bed,
-    Toilet,
-    Bath,
-    School,
-    Car,
+  ArrowLeft,
+  Droplets,
+  Hand,
+  Home,
+  MessageSquare,
+  Smile,
+  ThumbsUp,
+  Apple,
+  Pizza,
+  IceCream,
+  Cookie,
+  Milk,
+  Coffee,
+  Heart as HeartHand,
+  Eye,
+  Ear,
+  Heart,
+  Frown,
+  Laugh,
+  Angry,
+  Meh,
+  Zap,
+  Sun,
+  Moon,
+  Wind,
+  Thermometer,
+  Home as HomeWord,
+  Bed,
+  Toilet,
+  Bath,
+  School,
+  Car,
+  Utensils,
+  Beef,
+  Egg,
+  Carrot,
+  Banana,
+  Baby,
+  Volume2,
+  Check,
+  X,
+  House,
+  Cloud,
+  Building,
+  MapPin,
+  Store,
+  Sofa,
+  Tv,
+  Book,
+  Pen,
+  Phone,
+  Music,
+  Gamepad2,
+  Bus,
+  Bike,
+  Train,
+  Plane,
+  Church,
+  PenTool,
+  Pencil,
+  Notebook,
+  Clipboard,
+  GraduationCap,
+  Calculator,
+  Globe,
+  Ruler,
+  Scissors,
+  Palette,
+  Edit,
 } from "lucide-react-native";
 import React from "react";
 import { Dimensions, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
@@ -51,84 +88,159 @@ export interface Category {
   items: CategoryItem[];
 }
 
-// Dados das categorias
-// src/screens/Categories.tsx - ATUALIZE OS IDs
+// Dados das categorias atualizados com ícones apropriados
 export const categoryData: Category[] = [
   {
-    id: "comidas", // ← String simples, não UUID
+    id: "comidas",
     name: "Comidas",
     items: [
-      { icon: Pizza, label: "FRANGO" },
-      { icon: Pizza, label: "CARNE" },
-      { icon: Apple, label: "ARROZ" },
-      { icon: IceCream, label: "SALADA" },
-      { icon: Apple, label: "TOMATE" },
-      { icon: Cookie, label: "PÃO" },
-      { icon: Apple, label: "BANANA" },
-      { icon: IceCream, label: "MORANGO" },
+      { icon: Beef, label: "CARNE" },
+      { icon: Apple, label: "MAÇÃ" },
+      { icon: Carrot, label: "CENOURA" },
+      { icon: Banana, label: "BANANA" },
+      { icon: Egg, label: "OVO" },
+      { icon: Milk, label: "LEITE" },
+      { icon: Pizza, label: "PIZZA" },
+      { icon: IceCream, label: "SORVETE" },
     ],
   },
   {
-    id: "gestos", // ← String simples
+    id: "gestos",
     name: "Gestos",
     items: [
-      { icon: ThumbsUp, label: "Positivo" },
-      { icon: Hand, label: "Parar" },
-      { icon: Smile, label: "Oi/Tchau" },
-      { icon: HeartHand, label: "Amor" },
-      { icon: Eye, label: "Ver" },
-      { icon: Ear, label: "Ouvir" },
+      { icon: ThumbsUp, label: "POSITIVO" },
+      { icon: Hand, label: "PARAR" },
+      { icon: Hand, label: "OI/TCHAU" },
+      { icon: HeartHand, label: "AMOR" },
+      { icon: Eye, label: "VER" },
+      { icon: Ear, label: "OUVIR" },
+      { icon: Check, label: "CERTO" },
+      { icon: X, label: "ERRADO" },
+      { icon: Baby, label: "BEBÊ" },
     ],
   },
   {
-    id: "sentimentos", // ← String simples
+    id: "sentimentos",
     name: "Sentimentos",
     items: [
-      { icon: Heart, label: "Te amo" },
-      { icon: Smile, label: "Feliz" },
-      { icon: Frown, label: "Triste" },
-      { icon: Laugh, label: "Alegre" },
-      { icon: Angry, label: "Bravo" },
-      { icon: Meh, label: "Normal" },
+      { icon: Heart, label: "TE AMO" },
+      { icon: Smile, label: "FELIZ" },
+      { icon: Frown, label: "TRISTE" },
+      { icon: Laugh, label: "ALEGRE" },
+      { icon: Angry, label: "BRAVO" },
+      { icon: Meh, label: "NORMAL" },
+      { icon: Heart, label: "APAixonADO" },
+      { icon: Frown, label: "CANSADO" },
+      { icon: Smile, label: "CONTENTE" },
     ],
   },
   {
-    id: "sensacoes", // ← String simples
+    id: "sensacoes",
     name: "Sensações",
     items: [
-      { icon: Droplets, label: "Água/Sede" },
-      { icon: Zap, label: "Energia" },
-      { icon: Sun, label: "Calor" },
-      { icon: Moon, label: "Sono" },
-      { icon: Wind, label: "Frio" },
-      { icon: Thermometer, label: "Febre" },
+      { icon: Droplets, label: "SEDE" },
+      { icon: Utensils, label: "FOME" },
+      { icon: Sun, label: "CALOR" },
+      { icon: Moon, label: "SONO" },
+      { icon: Wind, label: "FRIO" },
+      { icon: Thermometer, label: "FEBRE" },
+      { icon: Zap, label: "DOR" },
+      { icon: Cloud, label: "ENJOO" },
+      { icon: Sun, label: "COCEIRA" },
     ],
   },
   {
-    id: "essenciais", // ← String simples
+    id: "essenciais",
     name: "Palavras Essenciais",
     items: [
-      { icon: HomeWord, label: "Casa" },
-      { icon: Bed, label: "Cama" },
-      { icon: Toilet, label: "Banheiro" },
-      { icon: Bath, label: "Banho" },
-      { icon: School, label: "Escola" },
-      { icon: Car, label: "Carro" },
+      { icon: Bed, label: "CAMA" },
+      { icon: Toilet, label: "BANHEIRO" },
+      { icon: Bath, label: "BANHO" },
+      { icon: School, label: "ESCOLA" },
+      { icon: Car, label: "CARRO" },
+      { icon: Utensils, label: "COMIDA" },
+      { icon: Droplets, label: "ÁGUA" },
+      { icon: Heart, label: "AMOR" },
+    ],
+  },
+  {
+    id: "lugares",
+    name: "Lugares",
+    items: [
+      { icon: House, label: "CASA" },
+      { icon: School, label: "ESCOLA" },
+      { icon: Store, label: "MERCADO" },
+      { icon: Building, label: "HOSPITAL" },
+      { icon: MapPin, label: "PRAIA" },
+      { icon: Church, label: "IGREJA" },
+    ],
+  },
+  {
+    id: "objetos",
+    name: "Objetos",
+    items: [
+      { icon: Tv, label: "TV" },
+      { icon: Sofa, label: "SOFÁ" },
+      { icon: Bed, label: "CAMA" },
+      { icon: Book, label: "LIVRO" },
+      { icon: Pen, label: "CANETA" },
+      { icon: Phone, label: "CELULAR" },
+      { icon: Utensils, label: "GARFO" },
+      { icon: Music, label: "RÁDIO" },
+      { icon: Gamepad2, label: "VIDEOGAME" },
+    ],
+  },
+  {
+    id: "transportes",
+    name: "Transportes",
+    items: [
+      { icon: Car, label: "CARRO" },
+      { icon: Bike, label: "BICICLETA" },
+      { icon: Bus, label: "ÔNIBUS" },
+      { icon: Train, label: "TREM" },
+      { icon: Plane, label: "AVIÃO" },
+    ],
+  },
+  {
+    id: "escola",
+    name: "Escola",
+    items: [
+      { icon: Book, label: "LIVRO" },
+      { icon: Pen, label: "CANETA" },
+      { icon: Pencil, label: "LÁPIS" },
+      { icon: Notebook, label: "CADERNO" },
+      { icon: Clipboard, label: "PRANCHETA" },
+      { icon: GraduationCap, label: "FORMATURA" },
+      { icon: Calculator, label: "CALCULADORA" },
+      { icon: Globe, label: "GLOBO" },
+      { icon: Ruler, label: "RÉGUA" },
+      { icon: Scissors, label: "TESOURA" },
+      { icon: Palette, label: "TINTAS" },
+      { icon: Music, label: "MÚSICA" },
     ],
   },
 ];
 
+// Ícone personalizado para frango (se não existir no lucide)
+const Chicken = ({ size, color, strokeWidth }: any) => (
+  <Text style={{ fontSize: size, color }}>🍗</Text>
+);
+
 export default function Categories() {
   const navigation = useNavigation();
 
-  // Use Apple como ícone de comida
+  // Categorias principais atualizadas
   const categories = [
-    { icon: Apple, label: "COMIDAS", route: "CategoryItems", params: { categoryId: "comidas" } },
+    { icon: Utensils, label: "COMIDAS", route: "CategoryItems", params: { categoryId: "comidas" } },
     { icon: Hand, label: "GESTOS", route: "CategoryItems", params: { categoryId: "gestos" } },
-    { icon: Smile, label: "SENTIMENTOS", route: "CategoryItems", params: { categoryId: "sentimentos" } },
-    { icon: Droplets, label: "SENSAÇÕES", route: "CategoryItems", params: { categoryId: "sensacoes" } },
-    { icon: ThumbsUp, label: "ESCOLHAS", route: "Choices" }, // Tela direta
-    { icon: MessageSquare, label: "PALAVRAS ESSENCIAIS", route: "CategoryItems", params: { categoryId: "essenciais" } },
+    { icon: Heart, label: "SENTIMENTOS", route: "CategoryItems", params: { categoryId: "sentimentos" } },
+    { icon: Thermometer, label: "SENSAÇÕES", route: "CategoryItems", params: { categoryId: "sensacoes" } },
+    { icon: HomeWord, label: "PALAVRAS ESSENCIAIS", route: "CategoryItems", params: { categoryId: "essenciais" } },
+    { icon: MapPin, label: "LUGARES", route: "CategoryItems", params: { categoryId: "lugares" } },
+    { icon: Tv, label: "OBJETOS", route: "CategoryItems", params: { categoryId: "objetos" } },
+    { icon: Car, label: "TRANSPORTES", route: "CategoryItems", params: { categoryId: "transportes" } },
+    { icon: ThumbsUp, label: "ESCOLHAS", route: "Choices" },
+    { icon: Notebook, label: "ESCOLA", route: "CategoryItems", params: { categoryId: "escola" } },
   ];
 
   const handleHome = () => {
@@ -148,7 +260,7 @@ export default function Categories() {
       </View>
 
       {/* GRID DE CATEGORIAS */}
-      <ScrollView 
+      <ScrollView
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
       >
@@ -176,14 +288,14 @@ export default function Categories() {
           <Home size={32} color="white" strokeWidth={2.5} />
         </TouchableOpacity>
 
-        <TouchableOpacity 
-          style={styles.navButton} 
+        <TouchableOpacity
+          style={styles.navButton}
           activeOpacity={0.7}
           onPress={() => navigation.navigate("Settings" as never)}
         >
           <View style={styles.settingsWrapper}>
             <View style={styles.settingsIcon}>
-              <ArrowLeft size={32} color="white" strokeWidth={2.5} />
+              <Edit size={32} color="white" strokeWidth={2.5} />
             </View>
           </View>
         </TouchableOpacity>
@@ -256,13 +368,6 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(255, 255, 255, 0.4)",
   },
 
-  circleIcon: {
-    width: 32,
-    height: 32,
-    borderRadius: 999,
-    backgroundColor: "rgba(255, 255, 255, 0.5)",
-  },
-
   settingsWrapper: {
     width: 32,
     height: 32,
@@ -275,13 +380,5 @@ const styles = StyleSheet.create({
     height: 32,
     alignItems: "center",
     justifyContent: "center",
-  },
-
-  settingsCircle: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    borderColor: "white",
-    borderWidth: 2,
   },
 });

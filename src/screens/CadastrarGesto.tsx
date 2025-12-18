@@ -6,11 +6,11 @@ import {
   TouchableOpacity,
   StyleSheet,
   ScrollView,
-  Alert,
   Image,
   Modal,
   FlatList,
-  ActivityIndicator
+  ActivityIndicator,
+  Dimensions
 } from "react-native";
 import {
   ArrowLeft,
@@ -18,13 +18,23 @@ import {
   Camera,
   X,
   FolderOpen,
-  Loader2
+  Loader2,
+  Search,
+  Check,
+  Grid3x3,
+  List
 } from "lucide-react-native";
 import { criarGesto, atualizarGesto } from "../services/gestos";
 import { useAuth } from "../contexts/AuthContext";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import { UploadService } from "../services/upload";
 import { categoryData, Category, CategoryItem } from "./Categories";
+import { allIconsList, iconCategories, IconName, getIconComponent } from "../../utils/icons";
+import { useToast } from '../../components/Toast';
+import { ConfirmModal } from '../../components/ConfirmModal'; 
+import { ActionSheetModal } from '../../components/ActionSheetModal';
+
+type IconCategoryKey = keyof typeof iconCategories;
 
 export default function CadastrarGesto() {
   const navigation = useNavigation();
@@ -41,11 +51,31 @@ export default function CadastrarGesto() {
   const [isLoading, setIsLoading] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [showCategoryModal, setShowCategoryModal] = useState(false);
+  const [showIconModal, setShowIconModal] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<Category | null>(
     defaultCategoryId
       ? categoryData.find(cat => cat.id === defaultCategoryId) || null
       : null
   );
+  const [iconSearch, setIconSearch] = useState("");
+  const [selectedIconCategory, setSelectedIconCategory] = useState<IconCategoryKey | null>(null);
+  const [selectedIconName, setSelectedIconName] = useState<string | null>(null);
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+  
+  // Estados para os modais
+  const [showImageOptionsModal, setShowImageOptionsModal] = useState(false);
+  const [showRemoveImageModal, setShowRemoveImageModal] = useState(false);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [successModalTitle, setSuccessModalTitle] = useState("");
+  const [successModalMessage, setSuccessModalMessage] = useState("");
+  const [showErrorToast, setShowErrorToast] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
+
+  const screenWidth = Dimensions.get('window').width;
+  const iconSize = (screenWidth - 80) / 4;
+
+  // Hook para toast
+  const showToast = useToast();
 
   useEffect(() => {
     if (gestoParaEditar) {
@@ -54,6 +84,12 @@ export default function CadastrarGesto() {
       setImagemUri(gestoParaEditar.imagem_url);
       const categoria = categoryData.find(cat => cat.id === gestoParaEditar.categoria_id);
       setSelectedCategory(categoria || null);
+
+      // Se a imagem for um ícone (começa com icon://)
+      if (gestoParaEditar.imagem_url?.startsWith('icon://')) {
+        const iconName = gestoParaEditar.imagem_url.replace('icon://', '');
+        setSelectedIconName(iconName);
+      }
     }
   }, [gestoParaEditar]);
 
@@ -67,10 +103,15 @@ export default function CadastrarGesto() {
       const imageUri = await UploadService.pickImageFromGallery();
       if (imageUri) {
         setImagemUri(imageUri);
+        setSelectedIconName(null); // Limpar ícone selecionado se escolher imagem
+        setShowImageOptionsModal(false);
       }
     } catch (error: any) {
       console.error("Erro ao selecionar imagem:", error);
-      Alert.alert("Erro", error.message || "Não foi possível selecionar a imagem.");
+      showToast({
+        message: error.message || "Não foi possível selecionar a imagem.",
+        type: 'error'
+      });
     } finally {
       setIsUploading(false);
     }
@@ -82,59 +123,47 @@ export default function CadastrarGesto() {
       const imageUri = await UploadService.takePhotoWithCamera();
       if (imageUri) {
         setImagemUri(imageUri);
+        setSelectedIconName(null); // Limpar ícone selecionado se tirar foto
+        setShowImageOptionsModal(false);
       }
     } catch (error: any) {
       console.error("Erro ao tirar foto:", error);
-      Alert.alert("Erro", error.message || "Não foi possível tirar a foto.");
+      showToast({
+        message: error.message || "Não foi possível tirar a foto.",
+        type: 'error'
+      });
     } finally {
       setIsUploading(false);
     }
   };
 
+  const handleSelectIcon = () => {
+    setShowIconModal(true);
+    setShowImageOptionsModal(false);
+    setIsUploading(false);
+  };
+
+  const handleIconSelected = (iconName: string) => {
+    // Usamos um esquema de URI especial para identificar ícones
+    const iconUri = `icon://${iconName}`;
+    setImagemUri(iconUri);
+    setSelectedIconName(iconName);
+    setShowIconModal(false);
+  };
+
   const handleRemoveImage = () => {
-    Alert.alert(
-      "Remover Imagem",
-      "Tem certeza que deseja remover a imagem?",
-      [
-        {
-          text: "Cancelar",
-          style: "cancel",
-        },
-        {
-          text: "Remover",
-          style: "destructive",
-          onPress: () => {
-            setImagemUri(null);
-          },
-        },
-      ]
-    );
+    setImagemUri(null);
+    setSelectedIconName(null);
+    setShowRemoveImageModal(false);
   };
 
   const handleChangeImage = () => {
-    Alert.alert(
-      "Escolher Imagem",
-      "Selecione a origem da imagem:",
-      [
-        {
-          text: "Tirar Foto",
-          onPress: () => handleTakePhoto(),
-        },
-        {
-          text: "Escolher da Galeria",
-          onPress: () => handlePickImage(),
-        },
-        {
-          text: "Cancelar",
-          style: "cancel",
-        },
-      ]
-    );
+    setShowImageOptionsModal(true);
   };
 
   const handleSelectCategory = (category: Category) => {
     setSelectedCategory(category);
-    setShowCategoryModal(false); // Fechar modal diretamente
+    setShowCategoryModal(false);
   };
 
   const handleClearCategory = () => {
@@ -155,147 +184,355 @@ export default function CadastrarGesto() {
     </TouchableOpacity>
   );
 
+  // Filtrar ícones baseado na pesquisa e categoria
+  const filteredIcons = allIconsList.filter(icon => {
+    const matchesSearch = iconSearch === '' ||
+      icon.name.toLowerCase().includes(iconSearch.toLowerCase());
+
+    if (selectedIconCategory) {
+      const categoryIcons = iconCategories[selectedIconCategory];
+      return matchesSearch && categoryIcons?.includes(icon.name);
+    }
+
+    return matchesSearch;
+  });
+
+  const renderIconItemGrid = ({ item }: { item: typeof allIconsList[0] }) => {
+    const IconComponent = item.component;
+    const isSelected = selectedIconName === item.name;
+
+    return (
+      <TouchableOpacity
+        style={[
+          styles.iconItemGrid,
+          isSelected && styles.iconItemSelected
+        ]}
+        onPress={() => handleIconSelected(item.name)}
+        activeOpacity={0.6}
+      >
+        <View style={[
+          styles.iconContainerGrid,
+          isSelected && styles.iconContainerSelected
+        ]}>
+          <IconComponent size={32} color={isSelected ? "white" : "#8BC5E5"} />
+        </View>
+        <Text
+          style={[
+            styles.iconNameGrid,
+            isSelected && styles.iconNameSelected
+          ]}
+          numberOfLines={1}
+          ellipsizeMode="tail"
+        >
+          {item.name}
+        </Text>
+        {isSelected && (
+          <View style={styles.iconCheckmark}>
+            <Check size={16} color="white" />
+          </View>
+        )}
+      </TouchableOpacity>
+    );
+  };
+
+  const renderIconItemList = ({ item }: { item: typeof allIconsList[0] }) => {
+    const IconComponent = item.component;
+    const isSelected = selectedIconName === item.name;
+
+    return (
+      <TouchableOpacity
+        style={[
+          styles.iconItemList,
+          isSelected && styles.iconItemSelected
+        ]}
+        onPress={() => handleIconSelected(item.name)}
+        activeOpacity={0.6}
+      >
+        <View style={[
+          styles.iconContainerList,
+          isSelected && styles.iconContainerSelected
+        ]}>
+          <IconComponent size={24} color={isSelected ? "white" : "#8BC5E5"} />
+        </View>
+        <Text
+          style={[
+            styles.iconNameList,
+            isSelected && styles.iconNameSelected
+          ]}
+          numberOfLines={1}
+          ellipsizeMode="tail"
+        >
+          {item.name}
+        </Text>
+        {isSelected && (
+          <View style={styles.iconCheckmark}>
+            <Check size={16} color="white" />
+          </View>
+        )}
+      </TouchableOpacity>
+    );
+  };
+
+  const renderCategoryChip = (category: IconCategoryKey, index: number) => {
+    const isSelected = selectedIconCategory === category;
+    const iconCount = iconCategories[category]?.length || 0;
+
+    return (
+      <TouchableOpacity
+        key={`category-chip-${category}-${index}`}
+        style={[
+          styles.categoryChip,
+          isSelected && styles.categoryChipSelected
+        ]}
+        onPress={() => setSelectedIconCategory(isSelected ? null : category)}
+        activeOpacity={0.7}
+      >
+        <Text style={[
+          styles.categoryChipText,
+          isSelected && styles.categoryChipTextSelected
+        ]}>
+          {category} ({iconCount})
+        </Text>
+      </TouchableOpacity>
+    );
+  };
+
+  // Função handleSalvar atualizada
   async function handleSalvar() {
     if (!nome.trim()) {
-      Alert.alert("Atenção", "Por favor, insira um nome para o gesto.");
+      showToast({
+        message: "Por favor, insira um nome para o gesto.",
+        type: 'warning'
+      });
       return;
     }
 
     if (!imagemUri) {
-      Alert.alert("Atenção", "Por favor, adicione uma imagem para o gesto.");
+      showToast({
+        message: "Por favor, adicione uma imagem para o gesto.",
+        type: 'warning'
+      });
       return;
     }
 
     if (!selectedCategory) {
-      Alert.alert("Atenção", "Por favor, selecione uma categoria para o gesto.");
+      showToast({
+        message: "Por favor, selecione uma categoria para o gesto.",
+        type: 'warning'
+      });
       return;
     }
 
     setIsLoading(true);
     try {
       let imagemUrl = "";
+      let iconeName = "";
+      let iconeLabel = "";
 
-      // Se a imagem for uma URI local e for diferente da atual, fazer upload
-      if ((imagemUri.startsWith('file://') || imagemUri.startsWith('content://')) &&
-        imagemUri !== gestoParaEditar?.imagem_url) {
+      console.log("🔄 Iniciando salvamento do gesto...");
+      console.log("📁 imagemUri:", imagemUri);
+      console.log("📊 gestoParaEditar?.imagem_url:", gestoParaEditar?.imagem_url);
+
+      // Se for um ícone nativo (começa com icon://)
+      if (imagemUri.startsWith('icon://')) {
+        const iconName = imagemUri.replace('icon://', '');
+        imagemUrl = imagemUri; // Mantemos a URI especial
+        iconeName = iconName;
+        iconeLabel = iconName;
+        console.log("✅ É um ícone:", iconName);
+      }
+      // Se for uma imagem LOCAL (nova ou para upload)
+      else if (imagemUri.startsWith('file://') || imagemUri.startsWith('content://')) {
+        console.log("📤 É uma imagem local, fazendo upload...");
         setIsUploading(true);
         try {
-          const uploadResult = await UploadService.uploadGestoImage(user?.id || '', imagemUri, gestoParaEditar?.id);
+          const uploadResult = await UploadService.uploadGestoImage(
+            user?.id || '',
+            imagemUri,
+            gestoParaEditar?.id
+          );
+
+          console.log("📊 Resultado do upload:", uploadResult);
+
           if (uploadResult.success && uploadResult.url) {
             imagemUrl = uploadResult.url;
+            console.log("✅ Upload bem-sucedido, URL:", imagemUrl);
           } else {
             throw new Error(uploadResult.error || 'Falha no upload da imagem');
           }
         } catch (uploadError: any) {
-          console.error("Erro no upload:", uploadError);
+          console.error("❌ Erro no upload:", uploadError);
           throw new Error("Falha ao fazer upload da imagem: " + uploadError.message);
         } finally {
           setIsUploading(false);
         }
-      } else {
-        // Se já for uma URL (remota) ou é a mesma imagem, usar diretamente
+      }
+      // Se já for uma URL remota (HTTPS) - mantém como está
+      else if (imagemUri.startsWith('https://') || imagemUri.startsWith('http://')) {
+        console.log("🔗 É uma URL remota, mantendo:", imagemUri);
         imagemUrl = imagemUri;
+
+        // Verificar se é um ícone salvo anteriormente
+        if (imagemUri.startsWith('icon://')) {
+          const iconName = imagemUri.replace('icon://', '');
+          iconeName = iconName;
+          iconeLabel = iconName;
+        }
+      }
+      // Fallback - erro
+      else {
+        console.error("❌ Tipo de imagem não suportado:", imagemUri);
+        throw new Error("Tipo de imagem não suportado");
       }
 
+      console.log("💾 Dados para salvar:", {
+        nome: nome.trim(),
+        descricao: descricao.trim(),
+        categoria_id: selectedCategory.id,
+        iconeLabel,
+        iconeName,
+        imagemUrl
+      });
+
       if (gestoParaEditar) {
+        console.log("✏️ Atualizando gesto existente ID:", gestoParaEditar.id);
         await atualizarGesto(gestoParaEditar.id, {
           nome: nome.trim(),
           descricao: descricao.trim(),
           categoria_id: selectedCategory.id,
-          iconeLabel: "",
-          iconeName: "",
-          imagemUrl
+          iconeLabel: iconeLabel,
+          iconeName: iconeName,
+          imagemUrl: imagemUrl
         });
 
-        Alert.alert(
-          "Sucesso!",
-          "Gesto atualizado com sucesso!",
-          [
-            {
-              text: "OK",
-              onPress: () => navigation.goBack(),
-            },
-          ]
-        );
+        // Usando modal de sucesso
+        setSuccessModalTitle("Sucesso!");
+        setSuccessModalMessage("Gesto atualizado com sucesso!");
+        setShowSuccessModal(true);
       } else {
         // Criar novo gesto
+        console.log("🆕 Criando novo gesto");
         await criarGesto({
           nome: nome.trim(),
           descricao: descricao.trim(),
           categoria_id: selectedCategory.id,
-          iconeLabel: "",
-          iconeName: "",
-          imagemUrl
+          iconeLabel: iconeLabel,
+          iconeName: iconeName,
+          imagemUrl: imagemUrl
         });
 
-        Alert.alert(
-          "Sucesso!",
-          "Gesto criado com sucesso!",
-          [
-            {
-              text: "OK",
-              onPress: () => navigation.goBack(),
-            },
-          ]
-        );
+        // Usando modal de sucesso
+        setSuccessModalTitle("Sucesso!");
+        setSuccessModalMessage("Gesto criado com sucesso!");
+        setShowSuccessModal(true);
       }
+
+      console.log("✅ Gesto salvo com sucesso!");
+
     } catch (error: any) {
-      console.error("Erro ao salvar gesto:", error);
-      Alert.alert("Erro", error.message || "Não foi possível salvar o gesto. Tente novamente.");
+      console.error("❌ Erro ao salvar gesto:", error);
+      showToast({
+        message: error.message || "Não foi possível salvar o gesto. Tente novamente.",
+        type: 'error'
+      });
     } finally {
       setIsLoading(false);
     }
   }
 
-  const renderImageSection = () => (
-    <View style={styles.imageSection}>
-      <Text style={styles.sectionTitle}>Imagem do Gesto *</Text>
+  const renderImageSection = () => {
+    // Se for um ícone nativo, mostrar o ícone
+    if (imagemUri?.startsWith('icon://')) {
+      const iconName = imagemUri.replace('icon://', '') as IconName;
+      const IconComponent = getIconComponent(iconName);
 
-      {imagemUri ? (
-        <View style={styles.imagePreviewContainer}>
-          <Image source={{ uri: imagemUri }} style={styles.imagePreview} />
-          <View style={styles.imageActions}>
-            <TouchableOpacity
-              style={[styles.imageActionButton, styles.changeButton]}
-              onPress={handleChangeImage}
-              disabled={isUploading}
-            >
-              <Camera size={20} color="white" />
-              <Text style={styles.imageActionText}>Trocar</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.imageActionButton, styles.removeButton]}
-              onPress={handleRemoveImage}
-              disabled={isUploading}
-            >
-              <X size={20} color="white" />
-              <Text style={styles.imageActionText}>Remover</Text>
-            </TouchableOpacity>
+      return (
+        <View key="image-section-icon" style={styles.imageSection}>
+          <Text style={styles.sectionTitle}>Ícone do Gesto *</Text>
+          <View style={styles.imagePreviewContainer}>
+            <View style={styles.iconPreview}>
+              <IconComponent size={80} color="#8BC5E5" />
+              <Text style={styles.iconPreviewName}>{iconName}</Text>
+            </View>
+            <View style={styles.imageActions}>
+              <TouchableOpacity
+                key="change-button"
+                style={[styles.imageActionButton, styles.changeButton]}
+                onPress={handleChangeImage}
+                disabled={isUploading}
+              >
+                <Camera size={20} color="white" />
+                <Text style={styles.imageActionText}>Trocar</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                key="remove-button"
+                style={[styles.imageActionButton, styles.removeButton]}
+                onPress={() => setShowRemoveImageModal(true)}
+                disabled={isUploading}
+              >
+                <X size={20} color="white" />
+                <Text style={styles.imageActionText}>Remover</Text>
+              </TouchableOpacity>
+            </View>
           </View>
         </View>
-      ) : (
-        <TouchableOpacity
-          style={[styles.imageUploadButton, isUploading && styles.uploadButtonDisabled]}
-          onPress={handleChangeImage}
-          disabled={isUploading}
-          activeOpacity={0.7}
-        >
-          {isUploading ? (
-            <ActivityIndicator size="large" color="#8BC5E5" />
-          ) : (
-            <>
-              <Camera size={40} color="#8BC5E5" />
-              <Text style={styles.imageUploadText}>Adicionar Imagem</Text>
-              <Text style={styles.imageUploadSubtext}>Toque para tirar foto ou escolher da galeria</Text>
-            </>
-          )}
-        </TouchableOpacity>
-      )}
-    </View>
-  );
+      );
+    }
+
+    // Se for uma imagem normal
+    return (
+      <View key="image-section-normal" style={styles.imageSection}>
+        <Text style={styles.sectionTitle}>Imagem do Gesto *</Text>
+
+        {imagemUri ? (
+          <View style={styles.imagePreviewContainer}>
+            <Image source={{ uri: imagemUri }} style={styles.imagePreview} />
+            <View style={styles.imageActions}>
+              <TouchableOpacity
+                key="change-button-img"
+                style={[styles.imageActionButton, styles.changeButton]}
+                onPress={handleChangeImage}
+                disabled={isUploading}
+              >
+                <Camera size={20} color="white" />
+                <Text style={styles.imageActionText}>Trocar</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                key="remove-button-img"
+                style={[styles.imageActionButton, styles.removeButton]}
+                onPress={() => setShowRemoveImageModal(true)}
+                disabled={isUploading}
+              >
+                <X size={20} color="white" />
+                <Text style={styles.imageActionText}>Remover</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        ) : (
+          <TouchableOpacity
+            key="upload-button"
+            style={[styles.imageUploadButton, isUploading && styles.uploadButtonDisabled]}
+            onPress={handleChangeImage}
+            disabled={isUploading}
+            activeOpacity={0.7}
+          >
+            {isUploading ? (
+              <ActivityIndicator size="large" color="#8BC5E5" />
+            ) : (
+              <>
+                <Camera size={40} color="#8BC5E5" />
+                <Text style={styles.imageUploadText}>Adicionar Imagem ou Ícone</Text>
+                <Text style={styles.imageUploadSubtext}>Toque para tirar foto, escolher da galeria ou selecionar ícone</Text>
+              </>
+            )}
+          </TouchableOpacity>
+        )}
+      </View>
+    );
+  };
 
   const renderCategorySection = () => (
-    <View style={styles.categorySection}>
+    <View key="category-section" style={styles.categorySection}>
       <Text style={styles.sectionTitle}>Categoria *</Text>
 
       {selectedCategory ? (
@@ -312,6 +549,7 @@ export default function CadastrarGesto() {
             </View>
           </View>
           <TouchableOpacity
+            key="clear-category-button"
             style={styles.clearCategoryButton}
             onPress={handleClearCategory}
           >
@@ -320,6 +558,7 @@ export default function CadastrarGesto() {
         </View>
       ) : (
         <TouchableOpacity
+          key="select-category-button"
           style={styles.selectCategoryButton}
           onPress={() => setShowCategoryModal(true)}
           activeOpacity={0.7}
@@ -332,132 +571,295 @@ export default function CadastrarGesto() {
   );
 
   return (
-    <View style={styles.container}>
-      {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity
-          onPress={handleBack}
-          style={styles.backButton}
-          activeOpacity={0.7}
-          disabled={isLoading || isUploading}
-        >
-          <ArrowLeft size={28} color="#8BC5E5" />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Cadastrar Gesto</Text>
-      </View>
-
-      {/* Conteúdo */}
-      <ScrollView
-        contentContainerStyle={styles.content}
-        showsVerticalScrollIndicator={false}
-      >
-        <View style={styles.formCard}>
-          {/* Seção da Imagem */}
-          {renderImageSection()}
-
-          {/* Seção da Categoria */}
-          {renderCategorySection()}
-
-          {/* Campo Nome */}
-          <View style={styles.inputContainer}>
-            <Text style={styles.inputLabel}>Nome do Gesto *</Text>
-            <TextInput
-              value={nome}
-              onChangeText={setNome}
-              style={styles.input}
-              placeholder="Ex: Sim, Não, Mais"
-              placeholderTextColor="#999"
-              maxLength={50}
-              editable={!isLoading && !isUploading}
-            />
-            <Text style={styles.charCount}>{nome.length}/50</Text>
-          </View>
-
-          {/* Campo Descrição */}
-          <View style={styles.inputContainer}>
-            <Text style={styles.inputLabel}>Descrição (Opcional)</Text>
-            <TextInput
-              value={descricao}
-              onChangeText={setDescricao}
-              style={[styles.input, styles.textArea]}
-              placeholder="Descreva como fazer este gesto..."
-              placeholderTextColor="#999"
-              multiline
-              numberOfLines={4}
-              textAlignVertical="top"
-              maxLength={200}
-              editable={!isLoading && !isUploading}
-            />
-            <Text style={styles.charCount}>{descricao.length}/200</Text>
-          </View>
-
-          {/* Informações de exemplo */}
-          <View style={styles.infoBox}>
-            <Text style={styles.infoTitle}>💡 Dicas:</Text>
-            <Text style={styles.infoText}>
-              • Use fotos claras do gesto{"\n"}
-              • Escolha a categoria correta{"\n"}
-              • Use nomes simples e diretos{"\n"}
-              • Descreva movimentos claros{"\n"}
-            </Text>
-          </View>
-
-          {/* Botão Salvar */}
+    <>
+      <View style={styles.container}>
+        {/* Header */}
+        <View key="header" style={styles.header}>
           <TouchableOpacity
-            style={[
-              styles.saveButton,
-              (isLoading || isUploading || !nome.trim() || !imagemUri || !selectedCategory) && styles.saveButtonDisabled
-            ]}
-            onPress={handleSalvar}
+            key="back-button"
+            onPress={handleBack}
+            style={styles.backButton}
             activeOpacity={0.7}
-            disabled={isLoading || isUploading || !nome.trim() || !imagemUri || !selectedCategory}
+            disabled={isLoading || isUploading}
           >
-            {isLoading || isUploading ? (
-              <>
-                <Loader2 size={20} color="white" style={styles.loadingIcon} />
-                <Text style={styles.saveButtonText}>Salvando...</Text>
-              </>
-            ) : (
-              <>
-                <Save size={20} color="white" />
-                <Text style={styles.saveButtonText}>Salvar Gesto</Text>
-              </>
-            )}
+            <ArrowLeft size={28} color="#8BC5E5" />
           </TouchableOpacity>
+          <Text style={styles.headerTitle}>
+            {gestoParaEditar ? "Editar Gesto" : "Cadastrar Gesto"}
+          </Text>
         </View>
-      </ScrollView>
 
-      {/* Modal de Categorias */}
-      <Modal
-        visible={showCategoryModal}
-        animationType="slide"
-        transparent={true}
-        onRequestClose={() => setShowCategoryModal(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Selecione uma Categoria</Text>
-              <TouchableOpacity
-                onPress={() => setShowCategoryModal(false)}
-                style={styles.modalCloseButton}
-              >
-                <X size={24} color="#333" />
-              </TouchableOpacity>
+        {/* Conteúdo */}
+        <ScrollView
+          contentContainerStyle={styles.content}
+          showsVerticalScrollIndicator={false}
+        >
+          <View key="form-card" style={styles.formCard}>
+            {/* Seção da Imagem */}
+            {renderImageSection()}
+
+            {/* Seção da Categoria */}
+            {renderCategorySection()}
+
+            {/* Campo Nome */}
+            <View key="nome-field" style={styles.inputContainer}>
+              <Text style={styles.inputLabel}>Nome do Gesto *</Text>
+              <TextInput
+                key="nome-input"
+                value={nome}
+                onChangeText={setNome}
+                style={styles.input}
+                placeholder="Ex: Sim, Não, Mais"
+                placeholderTextColor="#999"
+                maxLength={50}
+                editable={!isLoading && !isUploading}
+              />
+              <Text style={styles.charCount}>{nome.length}/50</Text>
             </View>
 
-            <FlatList
-              key="category-list"
-              data={categoryData}
-              renderItem={renderCategoryItem}
-              keyExtractor={(item) => item.id}
-              contentContainerStyle={styles.categoryList}
-              numColumns={1}
-            />
+            {/* Campo Descrição */}
+            <View key="descricao-field" style={styles.inputContainer}>
+              <Text style={styles.inputLabel}>Descrição (Opcional)</Text>
+              <TextInput
+                key="descricao-input"
+                value={descricao}
+                onChangeText={setDescricao}
+                style={[styles.input, styles.textArea]}
+                placeholder="Descreva como fazer este gesto..."
+                placeholderTextColor="#999"
+                multiline
+                numberOfLines={4}
+                textAlignVertical="top"
+                maxLength={200}
+                editable={!isLoading && !isUploading}
+              />
+              <Text style={styles.charCount}>{descricao.length}/200</Text>
+            </View>
+
+            {/* Informações de exemplo */}
+            <View key="info-box" style={styles.infoBox}>
+              <Text style={styles.infoTitle}>💡 Dicas:</Text>
+              <Text style={styles.infoText}>
+                • Use fotos claras do gesto{"\n"}
+                • Ou selecione um ícone nativo{"\n"}
+                • Escolha a categoria correta{"\n"}
+                • Use nomes simples e diretos{"\n"}
+                • Descreva movimentos claros{"\n"}
+              </Text>
+            </View>
+
+            {/* Botão Salvar */}
+            <TouchableOpacity
+              key="save-button"
+              style={[
+                styles.saveButton,
+                (isLoading || isUploading || !nome.trim() || !imagemUri || !selectedCategory) && styles.saveButtonDisabled
+              ]}
+              onPress={handleSalvar}
+              activeOpacity={0.7}
+              disabled={isLoading || isUploading || !nome.trim() || !imagemUri || !selectedCategory}
+            >
+              {isLoading || isUploading ? (
+                <>
+                  <Loader2 size={20} color="white" style={styles.loadingIcon} />
+                  <Text style={styles.saveButtonText}>Salvando...</Text>
+                </>
+              ) : (
+                <>
+                  <Save size={20} color="white" />
+                  <Text style={styles.saveButtonText}>
+                    {gestoParaEditar ? "Atualizar Gesto" : "Salvar Gesto"}
+                  </Text>
+                </>
+              )}
+            </TouchableOpacity>
           </View>
-        </View>
-      </Modal>
-    </View>
+        </ScrollView>
+
+        {/* Modal de Categorias */}
+        <Modal
+          key="category-modal"
+          visible={showCategoryModal}
+          animationType="slide"
+          transparent={true}
+          onRequestClose={() => setShowCategoryModal(false)}
+        >
+          <View style={styles.modalOverlay}>
+            <View style={styles.modalContent}>
+              <View style={styles.modalHeader}>
+                <Text style={styles.modalTitle}>Selecione uma Categoria</Text>
+                <TouchableOpacity
+                  key="close-category-modal"
+                  onPress={() => setShowCategoryModal(false)}
+                  style={styles.modalCloseButton}
+                >
+                  <X size={24} color="#333" />
+                </TouchableOpacity>
+              </View>
+
+              <FlatList
+                key="category-list"
+                data={categoryData}
+                renderItem={renderCategoryItem}
+                keyExtractor={(item) => item.id}
+                contentContainerStyle={styles.categoryList}
+                numColumns={1}
+              />
+            </View>
+          </View>
+        </Modal>
+
+        {/* Modal de Seleção de Ícones */}
+        <Modal
+          key="icon-modal"
+          visible={showIconModal}
+          animationType="slide"
+          transparent={true}
+          onRequestClose={() => setShowIconModal(false)}
+        >
+          <View style={styles.modalOverlay}>
+            <View style={[styles.modalContent, styles.iconModalContent]}>
+              <View style={styles.modalHeader}>
+                <Text style={styles.modalTitle}>Selecione um Ícone</Text>
+                <TouchableOpacity
+                  key="close-icon-modal"
+                  onPress={() => setShowIconModal(false)}
+                  style={styles.modalCloseButton}
+                >
+                  <X size={24} color="#333" />
+                </TouchableOpacity>
+              </View>
+
+              {/* Barra de pesquisa */}
+              <View key="search-container" style={styles.searchContainer}>
+                <Search size={20} color="#666" style={styles.searchIcon} />
+                <TextInput
+                  key="search-input"
+                  style={styles.searchInput}
+                  placeholder="Pesquisar ícones..."
+                  value={iconSearch}
+                  onChangeText={setIconSearch}
+                  placeholderTextColor="#999"
+                />
+                {iconSearch.length > 0 && (
+                  <TouchableOpacity
+                    key="clear-search-button"
+                    onPress={() => setIconSearch('')}
+                    style={styles.clearSearchButton}
+                  >
+                    <X size={18} color="#666" />
+                  </TouchableOpacity>
+                )}
+              </View>
+
+              {/* View Mode Toggle */}
+              <View key="view-mode-container" style={styles.viewModeContainer}>
+                <TouchableOpacity
+                  key="grid-view-button"
+                  style={[
+                    styles.viewModeButton,
+                    viewMode === 'grid' && styles.viewModeButtonActive
+                  ]}
+                  onPress={() => setViewMode('grid')}
+                >
+                  <Grid3x3 size={20} color={viewMode === 'grid' ? "white" : "#666"} />
+                </TouchableOpacity>
+                <TouchableOpacity
+                  key="list-view-button"
+                  style={[
+                    styles.viewModeButton,
+                    viewMode === 'list' && styles.viewModeButtonActive
+                  ]}
+                  onPress={() => setViewMode('list')}
+                >
+                  <List size={20} color={viewMode === 'list' ? "white" : "#666"} />
+                </TouchableOpacity>
+              </View>
+
+              {/* Categorias de ícones */}
+              <ScrollView
+                key="categories-scroll"
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                style={styles.categoriesScroll}
+                contentContainerStyle={styles.categoriesContainer}
+              >
+                {(Object.keys(iconCategories) as IconCategoryKey[]).map((category, index) =>
+                  renderCategoryChip(category, index)
+                )}
+              </ScrollView>
+
+              {/* Contador de ícones */}
+              <View key="icon-count-container" style={styles.iconCountContainer}>
+                <Text style={styles.iconCountText}>
+                  {filteredIcons.length} ícones encontrados
+                </Text>
+              </View>
+
+              {/* Lista de ícones */}
+              <FlatList
+                key={`icon-list-${viewMode}`}
+                data={filteredIcons}
+                renderItem={viewMode === 'grid' ? renderIconItemGrid : renderIconItemList}
+                keyExtractor={(item) => item.name}
+                numColumns={viewMode === 'grid' ? 4 : 1}
+                contentContainerStyle={[
+                  styles.iconList,
+                  viewMode === 'grid' && styles.iconListGrid,
+                  viewMode === 'list' && styles.iconListList
+                ]}
+              />
+            </View>
+          </View>
+        </Modal>
+      </View>
+
+      {/* Modal de opções de imagem */}
+      <ActionSheetModal
+        visible={showImageOptionsModal}
+        title="Escolher Imagem"
+        actions={[
+          {
+            label: "Tirar Foto",
+            onPress: handleTakePhoto
+          },
+          {
+            label: "Escolher da Galeria",
+            onPress: handlePickImage
+          },
+          {
+            label: "Selecionar Ícone Nativo",
+            onPress: handleSelectIcon
+          }
+        ]}
+        onCancel={() => setShowImageOptionsModal(false)}
+      />
+
+      {/* Modal de confirmação para remover imagem */}
+      <ConfirmModal
+        visible={showRemoveImageModal}
+        title="Remover Imagem"
+        message="Tem certeza que deseja remover a imagem?"
+        confirmText="Remover"
+        cancelText="Cancelar"
+        onConfirm={handleRemoveImage}
+        onCancel={() => setShowRemoveImageModal(false)}
+      />
+
+      {/* Modal de sucesso */}
+      <ConfirmModal
+        visible={showSuccessModal}
+        title={successModalTitle}
+        message={successModalMessage}
+        confirmText="OK"
+        cancelText=""
+        onConfirm={() => {
+          setShowSuccessModal(false);
+          navigation.goBack();
+        }}
+        onCancel={() => setShowSuccessModal(false)}
+      />
+    </>
   );
 }
 
@@ -525,6 +927,24 @@ const styles = StyleSheet.create({
   imagePreviewContainer: {
     alignItems: "center",
   },
+  iconPreview: {
+    width: 200,
+    height: 200,
+    borderRadius: 16,
+    marginBottom: 16,
+    backgroundColor: "rgba(139, 197, 229, 0.1)",
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 2,
+    borderColor: "#8BC5E5",
+    borderStyle: "dashed",
+  },
+  iconPreviewName: {
+    fontSize: 14,
+    color: "#666",
+    marginTop: 8,
+    fontWeight: "500",
+  },
   imagePreview: {
     width: 200,
     height: 200,
@@ -576,6 +996,7 @@ const styles = StyleSheet.create({
     color: "#8BC5E5",
     marginTop: 16,
     marginBottom: 8,
+    textAlign: "center",
   },
   imageUploadSubtext: {
     fontSize: 14,
@@ -727,6 +1148,7 @@ const styles = StyleSheet.create({
   loadingIcon: {
     transform: [{ rotate: "0deg" }],
   },
+
   // Modal Styles
   modalOverlay: {
     flex: 1,
@@ -739,7 +1161,10 @@ const styles = StyleSheet.create({
     borderTopRightRadius: 24,
     paddingTop: 24,
     paddingBottom: 40,
-    maxHeight: "80%",
+    height: "80%",
+  },
+  iconModalContent: {
+    maxHeight: "90%",
   },
   modalHeader: {
     flexDirection: "row",
@@ -793,5 +1218,168 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 12,
+  },
+
+  // Icon Modal Styles
+  searchContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#f8f9fa",
+    borderRadius: 12,
+    marginHorizontal: 24,
+    marginBottom: 16,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+  },
+  searchIcon: {
+    marginRight: 12,
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: 16,
+    color: "#333",
+  },
+  clearSearchButton: {
+    padding: 4,
+  },
+  viewModeContainer: {
+    flexDirection: "row",
+    marginHorizontal: 24,
+    marginBottom: 16,
+    backgroundColor: "#f8f9fa",
+    borderRadius: 12,
+    padding: 4,
+  },
+  viewModeButton: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 8,
+    borderRadius: 8,
+  },
+  viewModeButtonActive: {
+    backgroundColor: "#8BC5E5",
+  },
+  categoriesScroll: {
+    marginHorizontal: 24,
+    marginBottom: 16,
+    minHeight: 36,
+    maxHeight: 36,
+  },
+  categoriesContainer: {
+    paddingHorizontal: 4,
+  },
+  categoryChip: {
+    backgroundColor: "#f8f9fa",
+    borderRadius: 20,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    marginRight: 8,
+    borderWidth: 1,
+    borderColor: "#e0e0e0",
+  },
+  categoryChipSelected: {
+    backgroundColor: "#8BC5E5",
+    borderColor: "#8BC5E5",
+  },
+  categoryChipText: {
+    fontSize: 14,
+    color: "#666",
+    fontWeight: "500",
+  },
+  categoryChipTextSelected: {
+    color: "white",
+  },
+  iconCountContainer: {
+    paddingHorizontal: 24,
+    marginBottom: 12,
+  },
+  iconCountText: {
+    fontSize: 14,
+    color: "#666",
+  },
+  iconList: {
+    paddingHorizontal: 20,
+    paddingBottom: 20,
+  },
+  iconListGrid: {
+    paddingHorizontal: 16,
+  },
+  iconListList: {
+    paddingHorizontal: 8,
+  },
+  iconItemGrid: {
+    alignItems: "center",
+    padding: 8,
+    width: (Dimensions.get('window').width - 80) / 4,
+    position: "relative",
+  },
+  iconItemList: {
+    flexDirection: "row",
+    alignItems: "center",
+    padding: 12,
+    backgroundColor: "#f8f9fa",
+    borderRadius: 12,
+    marginBottom: 8,
+    borderWidth: 1,
+    borderColor: "#e9ecef",
+    position: "relative",
+  },
+  iconItemSelected: {
+    backgroundColor: "rgba(139, 197, 229, 0.1)",
+    borderColor: "#8BC5E5",
+  },
+  iconContainerGrid: {
+    width: 64,
+    height: 64,
+    borderRadius: 16,
+    backgroundColor: "white",
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 8,
+    borderWidth: 1,
+    borderColor: "#e0e0e0",
+  },
+  iconContainerList: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    backgroundColor: "white",
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 12,
+    borderWidth: 1,
+    borderColor: "#e0e0e0",
+  },
+  iconContainerSelected: {
+    backgroundColor: "#8BC5E5",
+    borderColor: "#8BC5E5",
+  },
+  iconNameGrid: {
+    fontSize: 12,
+    color: "#666",
+    textAlign: "center",
+    width: "100%",
+  },
+  iconNameList: {
+    fontSize: 16,
+    color: "#333",
+    fontWeight: "500",
+    flex: 1,
+  },
+  iconNameSelected: {
+    color: "#8BC5E5",
+    fontWeight: "600",
+  },
+  iconCheckmark: {
+    position: "absolute",
+    top: 4,
+    right: 4,
+    backgroundColor: "#8BC5E5",
+    borderRadius: 999,
+    width: 20,
+    height: 20,
+    alignItems: "center",
+    justifyContent: "center",
   },
 });

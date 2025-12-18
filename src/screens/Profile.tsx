@@ -7,7 +7,6 @@ import {
   StyleSheet,
   ScrollView,
   TextInput,
-  Alert,
   KeyboardAvoidingView,
   Platform,
   ActivityIndicator,
@@ -24,19 +23,22 @@ import {
   Calendar,
   UserCircle,
   Loader2,
-  Image as ImageIcon,
   X,
-  LogOut, // ✅ Adicionado
-  Shield, // ✅ Adicionado
-  AlertCircle, // ✅ Adicionado
+  LogOut,
+  Shield,
+  AlertCircle,
 } from 'lucide-react-native';
 import { buscarPerfilUsuario, atualizarPerfil, UserProfile } from '../services/auth';
 import { UploadService } from '../services/upload';
-import { useAuth } from '../contexts/AuthContext'; // ✅ Corrigido: removido singOut
+import { useAuth } from '../contexts/AuthContext';
+import { useToast } from '../../components/Toast';
+import { ConfirmModal } from '../../components/ConfirmModal';
+import { ActionSheetModal } from '../../components/ActionSheetModal';
 
 const EditProfile = () => {
   const navigation = useNavigation();
-  const { signOut } = useAuth(); // ✅ Corrigido: use signOut (com 'n') do AuthContext
+  const { signOut } = useAuth();
+  const showToast = useToast();
 
   // Estados para os campos do perfil
   const [nome, setNome] = useState('');
@@ -48,6 +50,16 @@ const EditProfile = () => {
   const [isSaving, setIsSaving] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
+
+  // Estados para os modais
+  const [showImageOptionsModal, setShowImageOptionsModal] = useState(false);
+  const [showRemovePhotoModal, setShowRemovePhotoModal] = useState(false);
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
+  const [showDeleteAccountModal1, setShowDeleteAccountModal1] = useState(false);
+  const [showDeleteAccountModal2, setShowDeleteAccountModal2] = useState(false);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [successMessage, setSuccessMessage] = useState('');
+  const [sessionExpiredModal, setSessionExpiredModal] = useState(false);
 
   // Carregar dados do usuário sempre que a tela ganhar foco
   useFocusEffect(
@@ -67,18 +79,12 @@ const EditProfile = () => {
       console.error('Erro ao carregar perfil:', error);
 
       if (error.message === "Usuário não autenticado") {
-        Alert.alert(
-          'Sessão expirada',
-          'Sua sessão expirou. Por favor, faça login novamente.',
-          [
-            {
-              text: 'OK',
-              onPress: () => navigation.navigate('Login' as never),
-            },
-          ]
-        );
+        setSessionExpiredModal(true);
       } else {
-        Alert.alert('Erro', 'Não foi possível carregar os dados do perfil.');
+        showToast({
+          message: 'Não foi possível carregar os dados do perfil.',
+          type: 'error'
+        });
       }
     } finally {
       setIsLoading(false);
@@ -123,7 +129,10 @@ const EditProfile = () => {
   const handleSave = async () => {
     const error = validateForm();
     if (error) {
-      Alert.alert('Atenção', error);
+      showToast({
+        message: error,
+        type: 'warning'
+      });
       return;
     }
 
@@ -139,23 +148,15 @@ const EditProfile = () => {
 
       if (updatedProfile) {
         setUserProfile(updatedProfile);
-        Alert.alert(
-          'Sucesso!',
-          'Perfil atualizado com sucesso.',
-          [
-            {
-              text: 'OK',
-              onPress: () => navigation.goBack(),
-            },
-          ]
-        );
+        setSuccessMessage('Perfil atualizado com sucesso.');
+        setShowSuccessModal(true);
       }
     } catch (error: any) {
       console.error('Erro ao salvar perfil:', error);
-      Alert.alert(
-        'Erro',
-        error.message || 'Não foi possível salvar as alterações. Tente novamente.'
-      );
+      showToast({
+        message: error.message || 'Não foi possível salvar as alterações. Tente novamente.',
+        type: 'error'
+      });
     } finally {
       setIsSaving(false);
     }
@@ -165,102 +166,40 @@ const EditProfile = () => {
     navigation.goBack();
   };
 
-  // ✅ FUNÇÃO DE LOGOUT CORRIGIDA
-  const handleLogout = () => {
-    Alert.alert(
-      'Sair da Conta',
-      'Tem certeza que deseja sair da sua conta?',
-      [
-        {
-          text: 'Cancelar',
-          style: 'cancel',
-        },
-        {
-          text: 'Sair',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              setIsSaving(true);
-              await signOut(); // ✅ Agora está correto
-              // O AuthContext já deve redirecionar automaticamente para Login
-            } catch (error: any) {
-              console.error('Erro ao fazer logout:', error);
-              Alert.alert(
-                'Erro',
-                'Não foi possível sair da conta. Tente novamente.'
-              );
-            } finally {
-              setIsSaving(false);
-            }
-          },
-        },
-      ]
-    );
+  // ✅ FUNÇÃO DE LOGOUT
+  const confirmLogout = async () => {
+    try {
+      setIsSaving(true);
+      await signOut();
+    } catch (error: any) {
+      console.error('Erro ao fazer logout:', error);
+      showToast({
+        message: 'Não foi possível sair da conta. Tente novamente.',
+        type: 'error'
+      });
+    } finally {
+      setIsSaving(false);
+      setShowLogoutModal(false);
+    }
   };
 
   // FUNÇÃO PARA EXCLUIR CONTA (opcional)
-  const handleDeleteAccount = () => {
-    Alert.alert(
-      'Excluir Conta',
-      '⚠️ ATENÇÃO: Esta ação é irreversível!\n\nTodos os seus dados, gestos e informações serão permanentemente excluídos.',
-      [
-        {
-          text: 'Cancelar',
-          style: 'cancel',
-        },
-        {
-          text: 'Excluir Conta',
-          style: 'destructive',
-          onPress: () => {
-            Alert.alert(
-              'Confirmação Final',
-              'Tem certeza ABSOLUTA que deseja excluir sua conta? Esta ação não pode ser desfeita.',
-              [
-                {
-                  text: 'Cancelar',
-                  style: 'cancel',
-                },
-                {
-                  text: 'EXCLUIR CONTA',
-                  style: 'destructive',
-                  onPress: () => {
-                    // Aqui você implementaria a exclusão da conta
-                    Alert.alert(
-                      'Funcionalidade em desenvolvimento',
-                      'A exclusão de conta estará disponível em breve.'
-                    );
-                  },
-                },
-              ]
-            );
-          },
-        },
-      ]
-    );
+  const confirmDeleteAccount = () => {
+    // Implementação da exclusão de conta
+    showToast({
+      message: 'Funcionalidade em desenvolvimento. A exclusão de conta estará disponível em breve.',
+      type: 'info'
+    });
+    setShowDeleteAccountModal1(false);
+    setShowDeleteAccountModal2(false);
   };
 
   const handleChangePhoto = async () => {
-    Alert.alert(
-      'Alterar Foto',
-      'Escolha uma opção:',
-      [
-        {
-          text: 'Tirar Foto',
-          onPress: () => handleTakePhoto(),
-        },
-        {
-          text: 'Escolher da Galeria',
-          onPress: () => handlePickImage(),
-        },
-        {
-          text: 'Cancelar',
-          style: 'cancel',
-        },
-      ]
-    );
+    setShowImageOptionsModal(true);
   };
 
   const handlePickImage = async () => {
+    setShowImageOptionsModal(false);
     setIsUploading(true);
     try {
       const imageUri = await UploadService.pickImageFromGallery();
@@ -269,13 +208,17 @@ const EditProfile = () => {
       }
     } catch (error: any) {
       console.error('Erro ao selecionar imagem:', error);
-      Alert.alert('Erro', error.message || 'Não foi possível selecionar a imagem.');
+      showToast({
+        message: error.message || 'Não foi possível selecionar a imagem.',
+        type: 'error'
+      });
     } finally {
       setIsUploading(false);
     }
   };
 
   const handleTakePhoto = async () => {
+    setShowImageOptionsModal(false);
     setIsUploading(true);
     try {
       const imageUri = await UploadService.takePhotoWithCamera();
@@ -284,55 +227,52 @@ const EditProfile = () => {
       }
     } catch (error: any) {
       console.error('Erro ao tirar foto:', error);
-      Alert.alert('Erro', error.message || 'Não foi possível tirar a foto.');
+      showToast({
+        message: error.message || 'Não foi possível tirar a foto.',
+        type: 'error'
+      });
     } finally {
       setIsUploading(false);
     }
   };
 
-  const handleRemovePhoto = async () => {
+  const confirmRemovePhoto = async () => {
     if (!userProfile?.id) return;
 
-    Alert.alert(
-      'Remover Foto',
-      'Tem certeza que deseja remover sua foto de perfil?',
-      [
-        {
-          text: 'Cancelar',
-          style: 'cancel',
-        },
-        {
-          text: 'Remover',
-          style: 'destructive',
-          onPress: async () => {
-            setIsUploading(true);
-            try {
-              const success = await UploadService.removeAvatar(userProfile.id);
-              if (success) {
-                // Atualizar perfil para remover a URL do avatar
-                const updatedProfile = await atualizarPerfil({
-                  avatar_url: undefined
-                });
+    setIsUploading(true);
+    try {
+      const success = await UploadService.removeAvatar(userProfile.id);
+      if (success) {
+        // Atualizar perfil para remover a URL do avatar
+        const updatedProfile = await atualizarPerfil({
+          avatar_url: undefined
+        });
 
-                setAvatarUrl(undefined);
-                if (updatedProfile) {
-                  setUserProfile(updatedProfile);
-                }
+        setAvatarUrl(undefined);
+        if (updatedProfile) {
+          setUserProfile(updatedProfile);
+        }
 
-                Alert.alert('Sucesso', 'Foto removida com sucesso.');
-              } else {
-                Alert.alert('Erro', 'Não foi possível remover a foto.');
-              }
-            } catch (error: any) {
-              console.error('Erro ao remover foto:', error);
-              Alert.alert('Erro', 'Não foi possível remover a foto.');
-            } finally {
-              setIsUploading(false);
-            }
-          },
-        },
-      ]
-    );
+        showToast({
+          message: 'Foto removida com sucesso.',
+          type: 'success'
+        });
+      } else {
+        showToast({
+          message: 'Não foi possível remover a foto.',
+          type: 'error'
+        });
+      }
+    } catch (error: any) {
+      console.error('Erro ao remover foto:', error);
+      showToast({
+        message: 'Não foi possível remover a foto.',
+        type: 'error'
+      });
+    } finally {
+      setIsUploading(false);
+      setShowRemovePhotoModal(false);
+    }
   };
 
   const uploadAvatar = async (imageUri: string) => {
@@ -369,16 +309,28 @@ const EditProfile = () => {
         if (updatedProfile) {
           setAvatarUrl(uploadResult.url);
           setUserProfile(updatedProfile);
-          Alert.alert('Sucesso!', 'Foto atualizada com sucesso.');
+          showToast({
+            message: 'Foto atualizada com sucesso.',
+            type: 'success'
+          });
         } else {
-          Alert.alert('Erro', 'Não foi possível salvar a nova foto.');
+          showToast({
+            message: 'Não foi possível salvar a nova foto.',
+            type: 'error'
+          });
         }
       } else {
-        Alert.alert('Erro no Upload', uploadResult.error || 'Não foi possível fazer upload da imagem.');
+        showToast({
+          message: uploadResult.error || 'Não foi possível fazer upload da imagem.',
+          type: 'error'
+        });
       }
     } catch (error: any) {
       console.error('❌ Erro no upload:', error);
-      Alert.alert('Erro', 'Não foi possível atualizar a foto. Tente novamente.');
+      showToast({
+        message: 'Não foi possível atualizar a foto. Tente novamente.',
+        type: 'error'
+      });
     } finally {
       setIsUploading(false);
     }
@@ -460,7 +412,7 @@ const EditProfile = () => {
       {avatarUrl && !isUploading && (
         <TouchableOpacity
           style={styles.removePhotoButton}
-          onPress={handleRemovePhoto}
+          onPress={() => setShowRemovePhotoModal(true)}
           disabled={isSaving}
         >
           <X size={16} color="#ff4444" />
@@ -480,172 +432,272 @@ const EditProfile = () => {
   }
 
   return (
-    <KeyboardAvoidingView
-      style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-    >
-      {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity
-          onPress={handleBack}
-          style={styles.backButton}
-          activeOpacity={0.7}
-          disabled={isSaving || isUploading}
-        >
-          <ArrowLeft size={28} color="#8BC5E5" />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Editar Perfil</Text>
-        <TouchableOpacity
-          onPress={handleSave}
-          style={[
-            styles.saveButton,
-            (isSaving || isUploading) && styles.saveButtonDisabled,
-          ]}
-          activeOpacity={0.7}
-          disabled={isSaving || isUploading}
-        >
-          {isSaving ? (
-            <Loader2 size={20} color="white" style={styles.loadingIcon} />
-          ) : (
-            <Save size={24} color="white" />
-          )}
-        </TouchableOpacity>
-      </View>
-
-      {/* Conteúdo */}
-      <ScrollView
-        contentContainerStyle={styles.content}
-        showsVerticalScrollIndicator={false}
-        keyboardShouldPersistTaps="handled"
+    <>
+      <KeyboardAvoidingView
+        style={styles.container}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
-        {/* Seção da Foto */}
-        {renderPhotoSection()}
-
-        {/* Formulário */}
-        <View style={styles.form}>
-          <InputField
-            icon={UserCircle}
-            label="Nome *"
-            value={nome}
-            onChangeText={setNome}
-            placeholder="Digite seu nome"
-            disabled={false}
-          />
-
-          <InputField
-            icon={Mail}
-            label="E-mail"
-            value={email}
-            onChangeText={setEmail}
-            placeholder="Digite seu e-mail"
-            keyboardType="email-address"
-            disabled={true}
-          />
-
-          <InputField
-            icon={Phone}
-            label="Telefone"
-            value={telefone}
-            onChangeText={(text: string) => setTelefone(formatPhone(text))}
-            placeholder="(00) 00000-0000"
-            keyboardType="phone-pad"
-            maxLength={15}
-            disabled={false}
-          />
-
-          <InputField
-            icon={Calendar}
-            label="Data de Nascimento"
-            value={dataNascimento}
-            onChangeText={(text: string) => setDataNascimento(formatDate(text))}
-            placeholder="DD/MM/AAAA"
-            keyboardType="numbers-and-punctuation"
-            maxLength={10}
-            disabled={false}
-          />
-        </View>
-
-        {/* Informações da Conta */}
-        <View style={styles.infoSection}>
-          <Text style={styles.infoTitle}>Informações da Conta</Text>
-          <View style={styles.infoCard}>
-            <View style={styles.infoRow}>
-              <Text style={styles.infoLabel}>ID do Usuário:</Text>
-              <Text style={styles.infoValueSmall}>
-                {userProfile?.id?.substring(0, 8)}...
-              </Text>
-            </View>
-            {userProfile?.avatar_updated_at && (
-              <View style={styles.infoRow}>
-                <Text style={styles.infoLabel}>Foto atualizada em:</Text>
-                <Text style={styles.infoValue}>
-                  {new Date(userProfile.avatar_updated_at).toLocaleDateString('pt-BR')}
-                </Text>
-              </View>
-            )}
-            <View style={styles.infoRow}>
-              <Text style={styles.infoLabel}>Conta criada em:</Text>
-              <Text style={styles.infoValue}>
-                {userProfile?.created_at
-                  ? new Date(userProfile.created_at).toLocaleDateString('pt-BR')
-                  : 'Não disponível'}
-              </Text>
-            </View>
-            {userProfile?.updated_at && (
-              <View style={styles.infoRow}>
-                <Text style={styles.infoLabel}>Última atualização:</Text>
-                <Text style={styles.infoValue}>
-                  {new Date(userProfile.updated_at).toLocaleDateString('pt-BR')}
-                </Text>
-              </View>
-            )}
-          </View>
-        </View>
-
-        {/* ✅ SEÇÃO: Configurações de Segurança e Conta */}
-        <View style={styles.securitySection}>
-          <Text style={styles.securityTitle}>Segurança e Conta</Text>
-
-          {/* Botão de Logout */}
+        {/* Header */}
+        <View style={styles.header}>
           <TouchableOpacity
-            style={[styles.logoutButton, (isSaving || isUploading) && styles.buttonDisabled]}
-            onPress={handleLogout}
+            onPress={handleBack}
+            style={styles.backButton}
             activeOpacity={0.7}
             disabled={isSaving || isUploading}
           >
-            <LogOut size={20} color="#ff4444" style={styles.buttonIcon} />
-            <Text style={styles.logoutButtonText}>Sair da Conta</Text>
+            <ArrowLeft size={28} color="#8BC5E5" />
           </TouchableOpacity>
-
-          {/* Botão para Excluir Conta (opcional) */}
+          <Text style={styles.headerTitle}>Editar Perfil</Text>
           <TouchableOpacity
-            style={[styles.deleteAccountButton, (isSaving || isUploading) && styles.buttonDisabled]}
-            onPress={handleDeleteAccount}
+            onPress={handleSave}
+            style={[
+              styles.saveButton,
+              (isSaving || isUploading) && styles.saveButtonDisabled,
+            ]}
             activeOpacity={0.7}
             disabled={isSaving || isUploading}
           >
-            <AlertCircle size={20} color="#ff4444" style={styles.buttonIcon} />
-            <Text style={styles.deleteAccountText}>Excluir Minha Conta</Text>
+            {isSaving ? (
+              <Loader2 size={20} color="white" style={styles.loadingIcon} />
+            ) : (
+              <Save size={24} color="white" />
+            )}
           </TouchableOpacity>
-
-          {/* Informações de segurança */}
-          <View style={styles.securityInfo}>
-            <View style={styles.securityInfoHeader}>
-              <Shield size={20} color="#8BC5E5" />
-              <Text style={styles.securityInfoTitle}>Suas Informações estão Seguras</Text>
-            </View>
-            <Text style={styles.securityInfoText}>
-              • Dados protegidos por criptografia{'\n'}
-              • Nenhuma informação é compartilhada com terceiros{'\n'}
-              • Você pode excluir sua conta a qualquer momento
-            </Text>
-          </View>
         </View>
 
-        {/* Espaço extra para scroll */}
-        <View style={styles.bottomSpacer} />
-      </ScrollView>
-    </KeyboardAvoidingView>
+        {/* Conteúdo */}
+        <ScrollView
+          contentContainerStyle={styles.content}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+        >
+          {/* Seção da Foto */}
+          {renderPhotoSection()}
+
+          {/* Formulário */}
+          <View style={styles.form}>
+            <InputField
+              icon={UserCircle}
+              label="Nome *"
+              value={nome}
+              onChangeText={setNome}
+              placeholder="Digite seu nome"
+              disabled={false}
+            />
+
+            <InputField
+              icon={Mail}
+              label="E-mail"
+              value={email}
+              onChangeText={setEmail}
+              placeholder="Digite seu e-mail"
+              keyboardType="email-address"
+              disabled={true}
+            />
+
+            <InputField
+              icon={Phone}
+              label="Telefone"
+              value={telefone}
+              onChangeText={(text: string) => setTelefone(formatPhone(text))}
+              placeholder="(00) 00000-0000"
+              keyboardType="phone-pad"
+              maxLength={15}
+              disabled={false}
+            />
+
+            <InputField
+              icon={Calendar}
+              label="Data de Nascimento"
+              value={dataNascimento}
+              onChangeText={(text: string) => setDataNascimento(formatDate(text))}
+              placeholder="DD/MM/AAAA"
+              keyboardType="numbers-and-punctuation"
+              maxLength={10}
+              disabled={false}
+            />
+          </View>
+
+          {/* Informações da Conta */}
+          <View style={styles.infoSection}>
+            <Text style={styles.infoTitle}>Informações da Conta</Text>
+            <View style={styles.infoCard}>
+              <View style={styles.infoRow}>
+                <Text style={styles.infoLabel}>ID do Usuário:</Text>
+                <Text style={styles.infoValueSmall}>
+                  {userProfile?.id?.substring(0, 8)}...
+                </Text>
+              </View>
+              {userProfile?.avatar_updated_at && (
+                <View style={styles.infoRow}>
+                  <Text style={styles.infoLabel}>Foto atualizada em:</Text>
+                  <Text style={styles.infoValue}>
+                    {new Date(userProfile.avatar_updated_at).toLocaleDateString('pt-BR')}
+                  </Text>
+                </View>
+              )}
+              <View style={styles.infoRow}>
+                <Text style={styles.infoLabel}>Conta criada em:</Text>
+                <Text style={styles.infoValue}>
+                  {userProfile?.created_at
+                    ? new Date(userProfile.created_at).toLocaleDateString('pt-BR')
+                    : 'Não disponível'}
+                </Text>
+              </View>
+              {userProfile?.updated_at && (
+                <View style={styles.infoRow}>
+                  <Text style={styles.infoLabel}>Última atualização:</Text>
+                  <Text style={styles.infoValue}>
+                    {new Date(userProfile.updated_at).toLocaleDateString('pt-BR')}
+                  </Text>
+                </View>
+              )}
+            </View>
+          </View>
+
+          {/* ✅ SEÇÃO: Configurações de Segurança e Conta */}
+          <View style={styles.securitySection}>
+            <Text style={styles.securityTitle}>Segurança e Conta</Text>
+
+            {/* Botão de Logout */}
+            <TouchableOpacity
+              style={[styles.logoutButton, (isSaving || isUploading) && styles.buttonDisabled]}
+              onPress={() => setShowLogoutModal(true)}
+              activeOpacity={0.7}
+              disabled={isSaving || isUploading}
+            >
+              <LogOut size={20} color="#ff4444" style={styles.buttonIcon} />
+              <Text style={styles.logoutButtonText}>Sair da Conta</Text>
+            </TouchableOpacity>
+
+            {/* Botão para Excluir Conta (opcional) */}
+            <TouchableOpacity
+              style={[styles.deleteAccountButton, (isSaving || isUploading) && styles.buttonDisabled]}
+              onPress={() => setShowDeleteAccountModal1(true)}
+              activeOpacity={0.7}
+              disabled={isSaving || isUploading}
+            >
+              <AlertCircle size={20} color="#ff4444" style={styles.buttonIcon} />
+              <Text style={styles.deleteAccountText}>Excluir Minha Conta</Text>
+            </TouchableOpacity>
+
+            {/* Informações de segurança */}
+            <View style={styles.securityInfo}>
+              <View style={styles.securityInfoHeader}>
+                <Shield size={20} color="#8BC5E5" />
+                <Text style={styles.securityInfoTitle}>Suas Informações estão Seguras</Text>
+              </View>
+              <Text style={styles.securityInfoText}>
+                • Dados protegidos por criptografia{'\n'}
+                • Nenhuma informação é compartilhada com terceiros{'\n'}
+                • Você pode excluir sua conta a qualquer momento
+              </Text>
+            </View>
+          </View>
+
+          {/* Espaço extra para scroll */}
+          <View style={styles.bottomSpacer} />
+        </ScrollView>
+      </KeyboardAvoidingView>
+
+      {/* Modal de opções para foto */}
+      <ActionSheetModal
+        visible={showImageOptionsModal}
+        title="Alterar Foto"
+        actions={[
+          {
+            label: 'Tirar Foto',
+            onPress: handleTakePhoto
+          },
+          {
+            label: 'Escolher da Galeria',
+            onPress: handlePickImage
+          }
+        ]}
+        onCancel={() => setShowImageOptionsModal(false)}
+      />
+
+      {/* Modal de confirmação para remover foto */}
+      <ConfirmModal
+        visible={showRemovePhotoModal}
+        title="Remover Foto"
+        message="Tem certeza que deseja remover sua foto de perfil?"
+        confirmText="Remover"
+        cancelText="Cancelar"
+        onConfirm={confirmRemovePhoto}
+        onCancel={() => setShowRemovePhotoModal(false)}
+      />
+
+      {/* Modal de confirmação para logout */}
+      <ConfirmModal
+        visible={showLogoutModal}
+        title="Sair da Conta"
+        message="Tem certeza que deseja sair da sua conta?"
+        confirmText="Sair"
+        cancelText="Cancelar"
+        onConfirm={confirmLogout}
+        onCancel={() => setShowLogoutModal(false)}
+      />
+
+      {/* Primeiro modal de confirmação para excluir conta */}
+      <ConfirmModal
+        visible={showDeleteAccountModal1}
+        title="Excluir Conta"
+        message="⚠️ ATENÇÃO: Esta ação é irreversível!\n\nTodos os seus dados, gestos e informações serão permanentemente excluídos."
+        confirmText="Excluir Conta"
+        cancelText="Cancelar"
+        onConfirm={() => {
+          setShowDeleteAccountModal1(false);
+          setShowDeleteAccountModal2(true);
+        }}
+        onCancel={() => setShowDeleteAccountModal1(false)}
+      />
+
+      {/* Segundo modal de confirmação para excluir conta */}
+      <ConfirmModal
+        visible={showDeleteAccountModal2}
+        title="Confirmação Final"
+        message="Tem certeza ABSOLUTA que deseja excluir sua conta? Esta ação não pode ser desfeita."
+        confirmText="EXCLUIR CONTA"
+        cancelText="Cancelar"
+        onConfirm={confirmDeleteAccount}
+        onCancel={() => setShowDeleteAccountModal2(false)}
+      />
+
+      {/* Modal de sucesso */}
+      <ConfirmModal
+        visible={showSuccessModal}
+        title="Sucesso!"
+        message={successMessage}
+        confirmText="OK"
+        cancelText=""
+        onConfirm={() => {
+          setShowSuccessModal(false);
+          navigation.goBack();
+        }}
+        onCancel={() => {
+          setShowSuccessModal(false);
+          navigation.goBack();
+        }}
+      />
+
+      {/* Modal de sessão expirada */}
+      <ConfirmModal
+        visible={sessionExpiredModal}
+        title="Sessão expirada"
+        message="Sua sessão expirou. Por favor, faça login novamente."
+        confirmText="Ir para Login"
+        cancelText=""
+        onConfirm={() => {
+          setSessionExpiredModal(false);
+          navigation.navigate('Login' as never);
+        }}
+        onCancel={() => {
+          setSessionExpiredModal(false);
+          navigation.navigate('Login' as never);
+        }}
+      />
+    </>
   );
 };
 

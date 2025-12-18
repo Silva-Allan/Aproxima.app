@@ -7,7 +7,7 @@ import {
   Dimensions,
   Animated,
 } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, CommonActions } from '@react-navigation/native';
 import * as Speech from 'expo-speech';
 import { ThumbsUp, ThumbsDown, Home, ArrowLeft } from 'lucide-react-native';
 
@@ -34,10 +34,10 @@ const Choices = () => {
 
   const handleChoice = async (choice: string) => {
     if (isSpeaking) return;
-    
+
     const buttonScale = choice === 'Sim' ? yesScale : noScale;
     animateButton(buttonScale);
-    
+
     try {
       setIsSpeaking(true);
       await Speech.speak(choice, {
@@ -58,8 +58,12 @@ const Choices = () => {
   };
 
   const handleHome = () => {
-    // Solução para TypeScript
-    (navigation as any).navigate('Home');
+    navigation.dispatch(
+      CommonActions.reset({
+        index: 0,
+        routes: [{ name: 'Home' }],
+      })
+    );
   };
 
   return (
@@ -118,7 +122,7 @@ const Choices = () => {
           >
             <Home size={32} color="white" strokeWidth={2.5} />
           </TouchableOpacity>
-          
+
           <TouchableOpacity
             onPress={handleBack}
             style={styles.navButton}
@@ -140,7 +144,8 @@ const styles = StyleSheet.create({
   },
   header: {
     backgroundColor: 'white',
-    paddingVertical: 20,
+    paddingTop: 50,
+    paddingBottom: 20,
     paddingHorizontal: 24,
     shadowColor: '#000',
     shadowOffset: {
@@ -150,6 +155,8 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 3.84,
     elevation: 5,
+    borderRadius: 16
+    
   },
   headerContent: {
     maxWidth: 400,
@@ -208,6 +215,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-around',
     maxWidth: 400,
     marginHorizontal: 'auto',
+    gap: 24,
   },
   navButton: {
     padding: 12,

@@ -1,11 +1,10 @@
 import React, { useState } from "react";
-import { 
-  View, 
-  Text, 
-  TextInput, 
-  TouchableOpacity, 
-  StyleSheet, 
-  Alert,
+import {
+  View,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  StyleSheet,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -14,6 +13,7 @@ import {
 import { useNavigation } from "@react-navigation/native";
 import { ArrowLeft, Mail, Lock, LogIn, UserPlus, Eye, EyeOff } from "lucide-react-native";
 import { login } from "../services/auth";
+import { useToast } from "../../components/Toast";
 
 export default function LoginScreen() {
   const navigation = useNavigation();
@@ -21,6 +21,9 @@ export default function LoginScreen() {
   const [senha, setSenha] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  
+  // Hook para toast
+  const showToast = useToast();
 
   const handleBack = () => {
     navigation.goBack();
@@ -28,18 +31,25 @@ export default function LoginScreen() {
 
   const handleLogin = async () => {
     if (!email.trim() || !senha.trim()) {
-      Alert.alert("Atenção", "Por favor, preencha todos os campos.");
+      showToast({
+        message: "Por favor, preencha todos os campos.",
+        type: 'warning'
+      });
       return;
     }
 
     setIsLoading(true);
     try {
       await login(email, senha);
-      Alert.alert("Sucesso", "Login realizado com sucesso!", [
-        { text: "OK", onPress: () => navigation.navigate("Home" as never) }
-      ]);
+      showToast({
+        message: "Login realizado com sucesso!",
+        type: 'success'
+      });
     } catch (error: any) {
-      Alert.alert("Erro ao entrar", error.message || "Credenciais inválidas. Tente novamente.");
+      showToast({
+        message: error.message || "Credenciais inválidas. Tente novamente.",
+        type: 'error'
+      });
     } finally {
       setIsLoading(false);
     }
@@ -56,18 +66,11 @@ export default function LoginScreen() {
     >
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity
-          onPress={handleBack}
-          style={styles.backButton}
-          activeOpacity={0.7}
-        >
-          <ArrowLeft size={28} color="#8BC5E5" />
-        </TouchableOpacity>
         <Text style={styles.headerTitle}>Entrar na Conta</Text>
       </View>
 
       {/* Conteúdo */}
-      <ScrollView 
+      <ScrollView
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
@@ -182,13 +185,6 @@ export default function LoginScreen() {
           <View style={styles.quickAccessButtons}>
             <TouchableOpacity
               style={styles.quickButton}
-              onPress={() => navigation.navigate("Home" as never)}
-              activeOpacity={0.7}
-            >
-              <Text style={styles.quickButtonText}>Home</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.quickButton}
               onPress={() => {
                 setEmail("demo@aproxima.com");
                 setSenha("demo123");
@@ -220,7 +216,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     paddingTop: 60,
-    paddingBottom: 20,
+    paddingBottom: 30,
     paddingHorizontal: 24,
     backgroundColor: "white",
     shadowColor: "#000",
@@ -229,17 +225,12 @@ const styles = StyleSheet.create({
     shadowRadius: 3.84,
     elevation: 5,
   },
-  backButton: {
-    padding: 8,
-    borderRadius: 999,
-    backgroundColor: "rgba(139, 197, 229, 0.1)",
-    marginRight: 16,
-  },
   headerTitle: {
-    fontSize: 24,
+    fontSize: 28,
     fontWeight: "bold",
     color: "#333",
     flex: 1,
+    textAlign: "center",
   },
   content: {
     paddingHorizontal: 20,

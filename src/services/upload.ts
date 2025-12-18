@@ -8,201 +8,181 @@ export interface UploadResult {
     error?: string;
 }
 
+// Importação para toast - você precisará passar a função showToast como parâmetro
+// ou configurar um contexto global para toast
+
 export class UploadService {
     private static readonly AVATAR_BUCKET = 'avatars';
     private static readonly GESTOS_BUCKET = 'gestos';
+    
+    // Função para exibir toast (será injetada ou usada via contexto)
+    private static showToast?: (message: string, type: 'success' | 'error' | 'warning' | 'info') => void;
+
+    // Método para injetar a função showToast
+    static setToastHandler(handler: (message: string, type: 'success' | 'error' | 'warning' | 'info') => void) {
+        this.showToast = handler;
+    }
+
+    private static showAlert(message: string, type: 'success' | 'error' | 'warning' | 'info' = 'info') {
+        // Se showToast estiver configurado, use-o
+        if (this.showToast) {
+            this.showToast(message, type);
+        } else {
+            // Fallback para console.log em ambiente de desenvolvimento
+            console.log(`[${type.toUpperCase()}] ${message}`);
+        }
+    }
+
+    // ============================================
+    // MÉTODOS DE SELEÇÃO DE IMAGEM
+    // ============================================
 
     /**
-     * Seletor de imagem da galeria - VERSÃO FUNCIONAL
+     * Seletor de imagem da galeria - VERSÃO SIMPLIFICADA
      */
     static async pickImageFromGallery(): Promise<string | null> {
         try {
+            console.log('📁 Solicitando permissão da galeria...');
             const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+            
             if (status !== 'granted') {
-                console.warn('Permissão da galeria negada');
+                console.warn('❌ Permissão da galeria negada');
+                // Usando toast em vez de Alert
+                this.showAlert(
+                    'Precisamos de permissão para acessar sua galeria de fotos.',
+                    'warning'
+                );
                 return null;
             }
 
+            console.log('📁 Abrindo galeria...');
             const result = await ImagePicker.launchImageLibraryAsync({
-                mediaTypes: 'images',
+                mediaTypes: ['images'], // ✅ Array de strings
                 allowsEditing: true,
                 aspect: [1, 1],
                 quality: 0.8,
             });
 
-            if (result.canceled || !result.assets[0]) {
+            console.log('📁 Resultado da galeria:', {
+                canceled: result.canceled,
+                assetsCount: result.assets?.length || 0
+            });
+
+            if (result.canceled || !result.assets?.[0]) {
+                console.log('📁 Seleção cancelada');
                 return null;
             }
 
-            return result.assets[0].uri;
+            const imageUri = result.assets[0].uri;
+            console.log('✅ Imagem selecionada (resumido):', imageUri.substring(0, 50) + '...');
+            
+            return imageUri;
 
-        } catch (error) {
-            console.error('Erro ao selecionar imagem:', error);
+        } catch (error: any) {
+            console.error('💥 Erro ao selecionar imagem da galeria:', error);
+            this.showAlert(
+                'Erro ao selecionar imagem. Tente novamente.',
+                'error'
+            );
             return null;
         }
     }
 
     /**
-     * Tirar foto com câmera - VERSÃO FUNCIONAL
+     * Tirar foto com câmera - VERSÃO SIMPLIFICADA
      */
     static async takePhotoWithCamera(): Promise<string | null> {
         try {
+            console.log('📸 Solicitando permissão da câmera...');
             const { status } = await ImagePicker.requestCameraPermissionsAsync();
+            
             if (status !== 'granted') {
-                console.warn('Permissão da câmera negada');
+                console.warn('❌ Permissão da câmera negada');
+                // Usando toast em vez de Alert
+                this.showAlert(
+                    'Precisamos de permissão para acessar sua câmera.',
+                    'warning'
+                );
                 return null;
             }
 
+            console.log('📸 Abrindo câmera...');
             const result = await ImagePicker.launchCameraAsync({
-                mediaTypes: 'images',
+                mediaTypes: ['images'], // ✅ Array de strings
                 allowsEditing: true,
                 aspect: [1, 1],
                 quality: 0.8,
             });
 
-            if (result.canceled || !result.assets[0]) {
+            console.log('📸 Resultado da câmera:', {
+                canceled: result.canceled,
+                assetsCount: result.assets?.length || 0
+            });
+
+            if (result.canceled || !result.assets?.[0]) {
+                console.log('📸 Captura cancelada');
                 return null;
             }
 
-            return result.assets[0].uri;
+            const imageUri = result.assets[0].uri;
+            console.log('✅ Foto tirada (resumido):', imageUri.substring(0, 50) + '...');
+            
+            return imageUri;
 
-        } catch (error) {
-            console.error('Erro ao tirar foto:', error);
+        } catch (error: any) {
+            console.error('💥 Erro ao tirar foto:', error);
+            this.showAlert(
+                'Erro ao tirar foto. Tente novamente.',
+                'error'
+            );
             return null;
         }
     }
 
-    /**
-     * Método CORRETO para converter blob para base64 no React Native
-     */
-    private static async blobToBase64(blob: Blob): Promise<string> {
-        return new Promise((resolve, reject) => {
-            const reader = new FileReader();
-            reader.onloadend = () => {
-                const base64data = reader.result as string;
-                const base64 = base64data.split(',')[1];
-                resolve(base64);
-            };
-            reader.onerror = reject;
-            reader.readAsDataURL(blob);
-        });
-    }
+    // ============================================
+    // UPLOAD DE AVATAR - VERSÃO CORRIGIDA
+    // ============================================
 
     /**
-     * Upload de avatar - MÉTODO PRINCIPAL
+     * Upload de avatar
      */
     static async uploadAvatar(userId: string, imageUri: string): Promise<UploadResult> {
         try {
-            console.log('🚀 Iniciando upload para usuário:', userId);
+            console.log('🚀 UPLOAD INICIADO');
+            console.log('👤 User ID:', userId);
+            console.log('📱 Image URI (resumido):', imageUri.substring(0, 60) + '...');
 
-            // 1. Buscar a imagem usando fetch
-            console.log('📥 Buscando imagem...');
+            // 1. FETCH DA IMAGEM
+            console.log('📥 Fazendo fetch...');
             const response = await fetch(imageUri);
-
+            
             if (!response.ok) {
                 throw new Error(`Falha ao carregar imagem: ${response.status}`);
             }
 
-            // 2. Converter para blob
-            const blob = await response.blob();
-            console.log('📦 Tamanho da imagem:', blob.size, 'bytes');
-
-            // 3. Converter blob para base64
-            console.log('🔄 Convertendo para base64...');
-            const base64 = await this.blobToBase64(blob);
-
-            if (!base64) {
-                throw new Error('Falha ao converter imagem para base64');
+            // 2. LER COMO ARRAY BUFFER (NÃO COMO BLOB!)
+            console.log('🔢 Convertendo para ArrayBuffer...');
+            const arrayBuffer = await response.arrayBuffer();
+            
+            console.log(`📦 ArrayBuffer size: ${arrayBuffer.byteLength} bytes`);
+            
+            if (arrayBuffer.byteLength === 0) {
+                throw new Error('ArrayBuffer vazio - imagem não pode ser lida');
             }
 
-            // 4. Converter base64 para ArrayBuffer
-            const binaryString = atob(base64);
-            const bytes = new Uint8Array(binaryString.length);
-            for (let i = 0; i < binaryString.length; i++) {
-                bytes[i] = binaryString.charCodeAt(i);
-            }
-            const arrayBuffer = bytes.buffer;
+            // 3. CONVERTER PARA UINT8ARRAY
+            const bytes = new Uint8Array(arrayBuffer);
+            console.log(`✅ Bytes preparados: ${bytes.length}`);
 
-            // 5. Gerar nome único do arquivo
+            // 4. GERAR NOME DO ARQUIVO
             const timestamp = Date.now();
-            const random = Math.random().toString(36).substring(2, 9);
+            const random = Math.random().toString(36).substring(2, 10);
             const fileName = `${userId}/avatar_${timestamp}_${random}.jpg`;
+            
+            console.log(`📁 Nome do arquivo: ${fileName}`);
 
-            console.log('📁 Nome do arquivo:', fileName);
-
-            // 6. Fazer upload para Supabase Storage
-            console.log('⬆️  Enviando para Supabase Storage...');
-
-            const { data, error } = await supabase.storage
-                .from(this.AVATAR_BUCKET)
-                .upload(fileName, arrayBuffer, {
-                    contentType: 'image/jpeg',
-                    upsert: true,
-                    cacheControl: '3600',
-                });
-
-            if (error) {
-                console.error('❌ ERRO NO UPLOAD:', error);
-
-                // Tentar método simplificado como fallback
-                return await this.uploadAvatarSimple(userId, imageUri);
-            }
-
-            // 7. Obter URL pública
-            const { data: { publicUrl } } = supabase.storage
-                .from(this.AVATAR_BUCKET)
-                .getPublicUrl(fileName);
-
-            console.log('✅ Upload concluído! URL:', publicUrl);
-
-            return {
-                success: true,
-                url: publicUrl
-            };
-
-        } catch (error: any) {
-            console.error('💥 ERRO NO PROCESSO DE UPLOAD:', error);
-            return {
-                success: false,
-                error: error.message || 'Erro desconhecido no upload'
-            };
-        }
-    }
-
-    /**
-     * Upload SIMPLIFICADO - Método mais confiável
-     */
-    static async uploadAvatarSimple(userId: string, imageUri: string): Promise<UploadResult> {
-        try {
-            console.log('📤 Upload simplificado iniciado...');
-
-            // Método usando FileReader diretamente
-            const response = await fetch(imageUri);
-            const blob = await response.blob();
-
-            // Converter para base64 usando FileReader
-            const base64 = await new Promise<string>((resolve, reject) => {
-                const reader = new FileReader();
-                reader.onloadend = () => {
-                    const result = reader.result as string;
-                    const base64Data = result.split(',')[1];
-                    resolve(base64Data);
-                };
-                reader.onerror = reject;
-                reader.readAsDataURL(blob);
-            });
-
-            // Converter base64 para Uint8Array
-            const binaryString = atob(base64);
-            const bytes = new Uint8Array(binaryString.length);
-            for (let i = 0; i < binaryString.length; i++) {
-                bytes[i] = binaryString.charCodeAt(i);
-            }
-
-            // Gerar nome do arquivo
-            const fileName = `${userId}/avatar_${Date.now()}.jpg`;
-
-            // Upload
+            // 5. FAZER UPLOAD (COM UINT8ARRAY)
+            console.log('⬆️ Enviando para Supabase...');
             const { error } = await supabase.storage
                 .from(this.AVATAR_BUCKET)
                 .upload(fileName, bytes, {
@@ -210,83 +190,21 @@ export class UploadService {
                     upsert: true,
                 });
 
-            if (error) throw error;
+            if (error) {
+                console.error('❌ Erro no upload:', error);
+                this.showAlert('Erro ao fazer upload da imagem.', 'error');
+                return { success: false, error: error.message };
+            }
 
-            // Obter URL
+            // 6. OBTER URL
             const { data: { publicUrl } } = supabase.storage
                 .from(this.AVATAR_BUCKET)
                 .getPublicUrl(fileName);
 
-            return { success: true, url: publicUrl };
-
-        } catch (error: any) {
-            console.error('❌ Upload simplificado falhou:', error);
-            return { success: false, error: error.message };
-        }
-    }
-
-    /**
-     * Upload de imagem para gesto - ÚNICO MÉTODO
-     */
-    static async uploadGestoImage(userId: string, imageUri: string, gestoId?: number): Promise<UploadResult> {
-        try {
-            console.log('📤 Upload de gesto iniciado para usuário:', userId);
-            console.log('📷 URI da imagem:', imageUri);
-
-            // Gerar nome único do arquivo
-            const timestamp = Date.now();
-            const random = Math.random().toString(36).substring(2, 9);
-            
-            // Usar gestoId se fornecido, caso contrário criar nome temporário
-            const gestoIdPart = gestoId ? `gesto_${gestoId}` : 'temp';
-            const fileName = `${userId}/${gestoIdPart}_${timestamp}_${random}.jpg`;
-
-            console.log('📁 Nome do arquivo:', fileName);
-
-            // Converter imagem para blob
-            const response = await fetch(imageUri);
-            if (!response.ok) {
-                throw new Error(`Falha ao carregar imagem: ${response.status}`);
-            }
-
-            const blob = await response.blob();
-            console.log('📦 Tamanho do blob:', blob.size, 'bytes');
-
-            // Fazer upload para Supabase Storage
-            const { error } = await supabase.storage
-                .from(this.GESTOS_BUCKET)
-                .upload(fileName, blob, {
-                    contentType: 'image/jpeg',
-                    upsert: true,
-                    cacheControl: '3600',
-                });
-
-            if (error) {
-                console.error('❌ Erro no upload:', error);
-                return {
-                    success: false,
-                    error: error.message
-                };
-            }
-
-            // Obter URL pública CORRETA
-            const { data: { publicUrl } } = supabase.storage
-                .from(this.GESTOS_BUCKET)
-                .getPublicUrl(fileName);
-
             console.log('✅ Upload concluído! URL:', publicUrl);
-
-            // Testar se a URL é acessível
-            try {
-                const testResponse = await fetch(publicUrl);
-                console.log('🔗 Teste de URL:', testResponse.status);
-                if (!testResponse.ok) {
-                    console.warn('⚠️ URL pode ter problemas de acesso:', testResponse.status);
-                }
-            } catch (testError) {
-                console.warn('⚠️ Teste de URL falhou:', testError);
-            }
-
+            
+            this.showAlert('Upload realizado com sucesso!', 'success');
+            
             return {
                 success: true,
                 url: publicUrl
@@ -294,6 +212,10 @@ export class UploadService {
 
         } catch (error: any) {
             console.error('💥 Erro no upload:', error);
+            this.showAlert(
+                'Erro ao fazer upload da imagem. Tente novamente.',
+                'error'
+            );
             return {
                 success: false,
                 error: error.message || 'Erro desconhecido no upload'
@@ -302,62 +224,100 @@ export class UploadService {
     }
 
     /**
-     * Upload de imagem para gesto - ALIAS para compatibilidade (com "m")
+     * Upload SIMPLIFICADO (alias)
      */
+    static async uploadAvatarSimple(userId: string, imageUri: string): Promise<UploadResult> {
+        return this.uploadAvatar(userId, imageUri);
+    }
+
+    // ============================================
+    // UPLOAD DE GESTOS
+    // ============================================
+
+    /**
+     * Upload de imagem para gesto
+     */
+    static async uploadGestoImage(userId: string, imageUri: string, gestoId?: number): Promise<UploadResult> {
+        try {
+            console.log('🎭 Upload de gesto iniciado...');
+            
+            // Usar o mesmo método do avatar
+            const result = await this.uploadAvatar(userId, imageUri);
+            
+            if (result.success) {
+                console.log('✅ Gesto enviado com sucesso');
+                this.showAlert('Imagem do gesto enviada com sucesso!', 'success');
+            } else {
+                this.showAlert('Erro ao enviar imagem do gesto.', 'error');
+            }
+            
+            return result;
+
+        } catch (error: any) {
+            console.error('❌ Erro no upload do gesto:', error);
+            this.showAlert('Erro ao enviar imagem do gesto. Tente novamente.', 'error');
+            return {
+                success: false,
+                error: error.message || 'Erro no upload do gesto'
+            };
+        }
+    }
+
+    // Aliases para compatibilidade
+    static async uploadGestoImageWithArrayBuffer(userId: string, imageUri: string, gestoId?: number): Promise<UploadResult> {
+        return this.uploadGestoImage(userId, imageUri, gestoId);
+    }
+
     static async uploadGestoImagem(userId: string, imageUri: string, gestoId?: number): Promise<UploadResult> {
         return this.uploadGestoImage(userId, imageUri, gestoId);
     }
+
+    static async uploadGestoImageSimple(userId: string, imageUri: string, gestoId?: number): Promise<UploadResult> {
+        return this.uploadGestoImage(userId, imageUri, gestoId);
+    }
+
+    // ============================================
+    // MÉTODOS DE UTILIDADE
+    // ============================================
 
     /**
      * Remover avatar do usuário
      */
     static async removeAvatar(userId: string): Promise<boolean> {
         try {
-            console.log('🗑️  Removendo avatar do usuário:', userId);
+            console.log('🗑️ Removendo avatar do usuário:', userId);
 
-            const { data: files, error: listError } = await supabase.storage
+            const { error } = await supabase.storage
                 .from(this.AVATAR_BUCKET)
-                .list(userId);
+                .remove([`${userId}/`]);
 
-            if (listError) {
-                console.error('❌ Erro ao listar arquivos:', listError);
+            if (error) {
+                console.error('❌ Erro ao remover avatar:', error);
+                this.showAlert('Erro ao remover avatar.', 'error');
                 return false;
             }
 
-            if (!files || files.length === 0) {
-                console.log('ℹ️  Nenhum arquivo encontrado para remover');
-                return true;
-            }
-
-            const filesToRemove = files.map(file => `${userId}/${file.name}`);
-            const { error: deleteError } = await supabase.storage
-                .from(this.AVATAR_BUCKET)
-                .remove(filesToRemove);
-
-            if (deleteError) {
-                console.error('❌ Erro ao remover avatar:', deleteError);
-                return false;
-            }
-
-            console.log('✅ Avatar(s) removido(s) com sucesso');
+            this.showAlert('Avatar removido com sucesso!', 'success');
             return true;
-
         } catch (error) {
             console.error('💥 Erro ao remover avatar:', error);
+            this.showAlert('Erro ao remover avatar. Tente novamente.', 'error');
             return false;
         }
     }
 
     /**
-     * Obter URL do avatar
+     * Obter URL do avatar com cache-busting
      */
     static getAvatarUrl(avatarUrl?: string, userId?: string, size: number = 200): string {
         if (avatarUrl) {
-            // Adicionar timestamp para evitar cache
-            return `${avatarUrl}?t=${Date.now()}`;
+            const timestamp = Date.now();
+            const separator = avatarUrl.includes('?') ? '&' : '?';
+            return `${avatarUrl}${separator}t=${timestamp}`;
         }
 
-        const name = userId ? userId.substring(0, 8) : 'U';
+        // Fallback para avatar gerado
+        const name = userId ? encodeURIComponent(userId.substring(0, 8)) : 'U';
         return `https://ui-avatars.com/api/?name=${name}&background=8BC5E5&color=fff&bold=true&size=${size}`;
     }
 
@@ -366,8 +326,9 @@ export class UploadService {
      */
     static getGestoImagemUrl(imagemUrl?: string): string | undefined {
         if (!imagemUrl) return undefined;
-        // Adicionar timestamp para evitar cache
-        return `${imagemUrl}?t=${Date.now()}`;
+        const timestamp = Date.now();
+        const separator = imagemUrl.includes('?') ? '&' : '?';
+        return `${imagemUrl}${separator}t=${timestamp}`;
     }
 
     /**
@@ -375,11 +336,29 @@ export class UploadService {
      */
     static async testImageUrl(url: string): Promise<boolean> {
         try {
-            const response = await fetch(url);
+            const response = await fetch(url, { method: 'HEAD' });
             return response.ok;
         } catch (error) {
             console.error('❌ Erro ao testar URL:', url, error);
             return false;
+        }
+    }
+
+    /**
+     * Verificar se imagem existe e é acessível
+     */
+    static async verificarImagem(imagemUrl: string): Promise<{ ok: boolean; status?: number; error?: string }> {
+        try {
+            const response = await fetch(imagemUrl, { method: 'HEAD' });
+            return {
+                ok: response.ok,
+                status: response.status
+            };
+        } catch (error: any) {
+            return {
+                ok: false,
+                error: error.message
+            };
         }
     }
 }

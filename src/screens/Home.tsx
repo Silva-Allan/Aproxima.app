@@ -3,14 +3,13 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Edit, Home as HomeIcon, User } from 'lucide-react-native';
 import React from 'react';
 import {
-    Image,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View
+  Image,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View
 } from 'react-native';
 import { useAuth } from "../contexts/AuthContext";
-
 
 const Home = () => {
   const navigation = useNavigation();
@@ -27,20 +26,15 @@ const Home = () => {
     (navigation as any).navigate('Settings');
   };
 
-  const handleHome = () => {
-    (navigation as any).navigate('Home');
-  };
-
   const { user } = useAuth();
 
   const handleCriarGesto = () => {
     if (!user) {
-      (navigation as any).navigate("Login"); // ou "Login" se você tiver a tela
+      (navigation as any).navigate("Login");
       return;
     }
     (navigation as any).navigate("CadastrarGesto");
-};
-
+  };
 
   return (
     <LinearGradient
@@ -49,14 +43,15 @@ const Home = () => {
       start={{ x: 0, y: 0 }}
       end={{ x: 0, y: 1 }}
     >
-      {/* Header com logo */}
+      {/* Header com logo - Simplificado */}
       <View style={styles.header}>
-        {/* Use require() que é mais confiável */}
-        <Image 
-          source={require('@/assets/images/LogoAproximaPng.png')} 
-          style={styles.logo} 
+        <Image
+          source={require('@/assets/images/LogoAproximaPng.png')}
+          style={styles.logo}
           resizeMode="contain"
         />
+        {/* Frase abaixo da logo */}
+        <Text style={styles.logoSubtitle}>Comunicação por Gestos</Text>
       </View>
 
       {/* Área central com botão principal */}
@@ -91,16 +86,15 @@ const Home = () => {
           >
             <User size={32} color="#D946A6" strokeWidth={2.5} />
           </TouchableOpacity>
-          
+
           <TouchableOpacity
-            onPress={handleHome}
             style={[styles.navButton, styles.homeButton]}
             activeOpacity={0.7}
             accessibilityLabel="Home"
           >
             <HomeIcon size={32} color="white" strokeWidth={2.5} />
           </TouchableOpacity>
-          
+
           <TouchableOpacity
             onPress={handleSettings}
             style={styles.navButton}
@@ -121,16 +115,36 @@ const styles = StyleSheet.create({
   },
   header: {
     paddingTop: 60,
-    paddingBottom: 32,
+    paddingBottom: 20,
     alignItems: 'center',
     justifyContent: 'center',
   },
   logo: {
-    marginTop: 40,
     width: 300,
     height: 175,
-    shadowColor: '#4400ffff',
-    shadowOpacity: 0.1,
+    // Sombra mais suave e natural
+    shadowColor: '#9B3FA3',
+    shadowOffset: {
+      width: 0,
+      height: 8,
+    },
+    shadowOpacity: 0.2,
+    shadowRadius: 16,
+    elevation: 10,
+    // Pequeno brilho interno (se o PNG tiver transparência)
+    // Se não funcionar, remova estas linhas:
+    // backgroundColor: 'transparent',
+    // borderWidth: 1,
+    // borderColor: 'rgba(255, 255, 255, 0.3)',
+  },
+  logoSubtitle: {
+    marginTop: 10,
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#9B3FA3',
+    textAlign: 'center',
+    letterSpacing: 0.5,
+    opacity: 0.9,
   },
   mainContent: {
     flex: 1,

@@ -1,5 +1,6 @@
-// src/screens/MeusGestos.tsx - CORRIGIDO
-import React, { useState, useCallback } from 'react';
+// src/screens/MeusGestos.tsx - VERSÃO CORRIGIDA
+import * as React from 'react';
+import { useState, useCallback } from 'react';
 import {
   View,
   Text,
@@ -8,33 +9,77 @@ import {
   FlatList,
   Image,
   ActivityIndicator,
-  Alert,
+  ImageSourcePropType
 } from 'react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import {
   ArrowLeft,
   Home,
   Edit,
   Trash2,
   Plus,
+  Hand,
+  Bird,
+  Smile,
+  Heart,
+  ThumbsUp,
+  Frown,
+  Meh,
+  Laugh,
+  Angry,
+  Star,
+  Moon,
+  Sun,
+  Droplets,
+  Zap,
+  Flame,
+  CloudSnow,
+  Thermometer,
+  Activity,
 } from 'lucide-react-native';
 import { buscarMeusGestos, excluirGesto } from '../services/gestos';
 import { categoryData } from '../../utils/categoryData';
+import { useToast } from '../../components/Toast';
+import { ConfirmModal } from '../../components/ConfirmModal';
+
+// Defina o tipo das suas rotas para melhor autocompletar
+type RootStackParamList = {
+  Home: undefined;
+  CadastrarGesto: { gestoParaEditar?: any; modo?: string } | undefined;
+  EditGesto: { gesto: any };
+  MeusGestos: undefined;
+  // Adicione outras rotas conforme necessário
+};
+
+type NavigationProps = NativeStackNavigationProp<RootStackParamList>;
 
 const MeusGestos = () => {
-  const navigation = useNavigation();
-  
+  const navigation = useNavigation<NavigationProps>();
   const [meusGestos, setMeusGestos] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+
+  // Estados para modais
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [selectedGesto, setSelectedGesto] = useState<any>(null);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [successMessage, setSuccessMessage] = useState("");
+
+  // Hook para toast
+  const showToast = useToast();
 
   const loadMeusGestos = async () => {
     setIsLoading(true);
     try {
       const gestos = await buscarMeusGestos();
+      console.log('✅ Gestos carregados:', gestos.length, 'gestos');
       setMeusGestos(gestos);
     } catch (error) {
       console.error('Erro ao carregar gestos:', error);
-      Alert.alert('Erro', 'Não foi possível carregar seus gestos.');
+      showToast({
+        message: 'Não foi possível carregar seus gestos.',
+        type: 'error'
+      });
     } finally {
       setIsLoading(false);
     }
@@ -46,67 +91,126 @@ const MeusGestos = () => {
     }, [])
   );
 
+  // FUNÇÕES DE NAVEGAÇÃO - CORRIGIDAS
   const handleBack = () => {
     navigation.goBack();
   };
 
   const handleHome = () => {
-    (navigation as any).navigate('Home');
+    navigation.navigate('Home');
   };
 
+  // CORREÇÃO: Use 'CadastrarGesto' em vez de 'CreateGesto'
   const handleCreateGesto = () => {
-    (navigation as any).navigate('CadastrarGesto');
+    navigation.navigate('CadastrarGesto');
   };
 
+  // CORREÇÃO: Tipagem corrigida
   const handleEditGesto = (gesto: any) => {
-    (navigation as any).navigate('CadastrarGesto', { 
-      gestoParaEditar: gesto 
+    // Navega para a tela de cadastro com os dados do gesto para edição
+    navigation.navigate('CadastrarGesto', {
+      gestoParaEditar: gesto,
+      modo: 'editar'
     });
   };
 
-  const handleDeleteGesto = (gestoId: number) => {
-    Alert.alert(
-      'Confirmar Exclusão',
-      'Tem certeza que deseja excluir este gesto?',
-      [
-        {
-          text: 'Cancelar',
-          style: 'cancel',
-        },
-        {
-          text: 'Excluir',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await excluirGesto(gestoId);
-              Alert.alert('Sucesso!', 'Gesto excluído com sucesso!');
-              loadMeusGestos();
-            } catch (error) {
-              Alert.alert('Erro', 'Não foi possível excluir o gesto.');
-            }
-          },
-        },
-      ]
+  const handleDeleteGesto = async (gestoId: number) => {
+    setSelectedGesto(gestoId);
+    setShowDeleteModal(true);
+  };
+
+  const confirmDeleteGesto = async () => {
+    if (!selectedGesto) return;
+
+    try {
+      await excluirGesto(selectedGesto);
+      setSuccessMessage('Gesto excluído com sucesso!');
+      setShowSuccessModal(true);
+      // Recarregar a lista após exclusão
+      loadMeusGestos();
+    } catch (error) {
+      console.error('Erro ao excluir gesto:', error);
+      showToast({
+        message: 'Não foi possível excluir o gesto.',
+        type: 'error'
+      });
+    } finally {
+      setShowDeleteModal(false);
+      setSelectedGesto(null);
+    }
+  };
+
+  const getIconComponent = (iconName: string): React.ComponentType<any> => {
+    try {
+      const lucideIcons = require('lucide-react-native');
+      const IconComponent = lucideIcons[iconName];
+
+      if (!IconComponent) {
+        console.warn(`Ícone não encontrado: ${iconName}, usando Hand como fallback`);
+        return Hand;
+      }
+
+      return IconComponent;
+    } catch (error) {
+      console.error('Erro ao carregar ícone:', error);
+      return Hand;
+    }
+  };
+
+  const renderGestoImage = (gesto: any) => {
+    const { id, imagem_url, iconeName, nome } = gesto;
+
+    // 1. Ícone nativo
+    if (imagem_url?.startsWith('icon://') || iconeName) {
+      const iconName = imagem_url?.startsWith('icon://')
+        ? imagem_url.replace('icon://', '')
+        : iconeName;
+
+      const IconComponent = getIconComponent(iconName);
+
+      return (
+        <View style={styles.gestoIconContainer}>
+          <IconComponent size={28} color="white" />
+        </View>
+      );
+    }
+
+    // 2. Imagem URL
+    if (imagem_url && (
+      imagem_url.startsWith('https://') ||
+      imagem_url.startsWith('http://')
+    )) {
+      return (
+        <View style={styles.gestoImageContainer}>
+          <Image
+            source={{ uri: imagem_url } as ImageSourcePropType}
+            style={styles.gestoImage}
+            resizeMode="cover"
+            onError={() => console.warn(`Erro ao carregar imagem: ${imagem_url}`)}
+          />
+        </View>
+      );
+    }
+
+    // 3. Fallback
+    return (
+      <View style={styles.gestoFallbackIcon}>
+        <Text style={styles.gestoIconText}>{nome?.charAt(0)?.toUpperCase() || '?'}</Text>
+      </View>
     );
   };
 
   const renderGestoItem = ({ item }: { item: any }) => {
     const categoria = categoryData.find((cat) => cat.id === item.categoria_id);
-    
+
     return (
       <View style={styles.gestoItem}>
         <View style={styles.gestoInfo}>
-          {item.imagem_url ? (
-            <Image source={{ uri: item.imagem_url }} style={styles.gestoImage} />
-          ) : (
-            <View style={styles.gestoIcon}>
-              <Text style={styles.gestoIconText}>{item.nome.charAt(0)}</Text>
-            </View>
-          )}
+          {renderGestoImage(item)}
           <View style={styles.gestoDetails}>
-            <Text style={styles.gestoNome}>{item.nome}</Text>
+            <Text style={styles.gestoNome}>{item.nome || 'Gesto sem nome'}</Text>
             <Text style={styles.gestoCategoria}>
-              Categoria: {categoria?.name || item.categoria_id}
+              {categoria?.name || 'Sem categoria'}
             </Text>
             {item.descricao && (
               <Text style={styles.gestoDescricao} numberOfLines={2}>
@@ -134,80 +238,91 @@ const MeusGestos = () => {
   };
 
   return (
-    <View style={styles.container}>
-      {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity
-          onPress={handleBack}
-          style={styles.backButton}
-          activeOpacity={0.7}
-        >
-          <ArrowLeft size={28} color="#8BC5E5" />
-        </TouchableOpacity>
-        <View style={styles.headerContent}>
-          <Text style={styles.headerTitle}>Meus Gestos</Text>
-          <Text style={styles.headerSubtitle}>
-            {meusGestos.length} {meusGestos.length === 1 ? 'gesto' : 'gestos'} criados
-          </Text>
-        </View>
-      </View>
-
-      {/* Botão para criar novo gesto */}
-      <TouchableOpacity
-        style={styles.createButton}
-        onPress={handleCreateGesto}
-        activeOpacity={0.7}
-      >
-        <Plus size={20} color="white" />
-        <Text style={styles.createButtonText}>Criar Novo Gesto</Text>
-      </TouchableOpacity>
-
-      {/* Lista de gestos */}
-      {isLoading ? (
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#8BC5E5" />
-          <Text style={styles.loadingText}>Carregando seus gestos...</Text>
-        </View>
-      ) : meusGestos.length === 0 ? (
-        <View style={styles.emptyContainer}>
-          <Text style={styles.emptyText}>Você ainda não criou nenhum gesto.</Text>
-          <TouchableOpacity
-            style={styles.emptyButton}
-            onPress={handleCreateGesto}
-          >
-            <Text style={styles.emptyButtonText}>Criar Primeiro Gesto</Text>
+    <>
+      <View style={styles.container}>
+        {/* Header */}
+        <View style={styles.header}>
+          <TouchableOpacity onPress={handleBack} style={styles.backButton}>
+            <ArrowLeft size={28} color="#8BC5E5" />
           </TouchableOpacity>
+          <View style={styles.headerContent}>
+            <Text style={styles.headerTitle}>Meus Gestos</Text>
+            <Text style={styles.headerSubtitle}>
+              {meusGestos.length} {meusGestos.length === 1 ? 'gesto' : 'gestos'} criados
+            </Text>
+          </View>
         </View>
-      ) : (
-        <FlatList
-          data={meusGestos}
-          renderItem={renderGestoItem}
-          keyExtractor={(item) => item.id.toString()}
-          contentContainerStyle={styles.gestosList}
-          showsVerticalScrollIndicator={false}
-        />
-      )}
 
-      {/* Navegação inferior */}
-      <View style={styles.bottomNav}>
-        <View style={styles.navContent}>
-          <TouchableOpacity
-            onPress={handleHome}
-            style={styles.navButton}
-            activeOpacity={0.7}
-          >
+        {/* Botão para criar novo gesto */}
+        <TouchableOpacity style={styles.createButton} onPress={handleCreateGesto}>
+          <Plus size={20} color="white" />
+          <Text style={styles.createButtonText}>Criar Novo Gesto</Text>
+        </TouchableOpacity>
+
+        {/* Lista de gestos */}
+        {isLoading ? (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color="#8BC5E5" />
+            <Text style={styles.loadingText}>Carregando seus gestos...</Text>
+          </View>
+        ) : meusGestos.length === 0 ? (
+          <View style={styles.emptyContainer}>
+            <Text style={styles.emptyText}>Você ainda não criou nenhum gesto.</Text>
+            <TouchableOpacity style={styles.emptyButton} onPress={handleCreateGesto}>
+              <Text style={styles.emptyButtonText}>Criar Primeiro Gesto</Text>
+            </TouchableOpacity>
+          </View>
+        ) : (
+          <FlatList
+            data={meusGestos}
+            renderItem={renderGestoItem}
+            keyExtractor={(item) => item.id.toString()}
+            contentContainerStyle={styles.gestosList}
+            showsVerticalScrollIndicator={false}
+          />
+        )}
+
+        {/* Navegação inferior */}
+        <View style={styles.bottomNav}>
+          <TouchableOpacity onPress={handleHome} style={styles.navButton}>
             <Home size={32} color="white" strokeWidth={2.5} />
           </TouchableOpacity>
         </View>
       </View>
-    </View>
+
+      {/* Modal de confirmação para excluir gesto */}
+      <ConfirmModal
+        visible={showDeleteModal}
+        title="Confirmar Exclusão"
+        message="Tem certeza que deseja excluir este gesto?"
+        confirmText="Excluir"
+        cancelText="Cancelar"
+        onConfirm={confirmDeleteGesto}
+        onCancel={() => {
+          setShowDeleteModal(false);
+          setSelectedGesto(null);
+        }}
+      />
+
+      {/* Modal de sucesso */}
+      <ConfirmModal
+        visible={showSuccessModal}
+        title="Sucesso"
+        message={successMessage}
+        confirmText="OK"
+        cancelText=""
+        onConfirm={() => setShowSuccessModal(false)}
+        onCancel={() => setShowSuccessModal(false)}
+      />
+    </>
   );
 };
 
+// Estilos (mantenha os mesmos)
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#ffffffff',
+    backgroundColor: '#ffffff',
   },
   header: {
     flexDirection: 'row',
@@ -217,10 +332,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     backgroundColor: 'white',
     shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
+    shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 3.84,
     elevation: 5,
@@ -237,7 +349,7 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 28,
     fontWeight: 'bold',
-    color: '#000000ff',
+    color: '#000000',
   },
   headerSubtitle: {
     fontSize: 16,
@@ -255,14 +367,6 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     borderRadius: 16,
     gap: 10,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
   },
   createButtonText: {
     fontSize: 16,
@@ -317,10 +421,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
+    shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 3,
@@ -331,22 +432,35 @@ const styles = StyleSheet.create({
     flex: 1,
     gap: 12,
   },
-  gestoImage: {
-    width: 50,
-    height: 50,
+  gestoIconContainer: {
+    width: 60,
+    height: 60,
     borderRadius: 12,
+    backgroundColor: '#8BC5E5',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  gestoImageContainer: {
+    width: 60,
+    height: 60,
+    borderRadius: 12,
+    overflow: 'hidden' as const,
     backgroundColor: '#f8f9fa',
   },
-  gestoIcon: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
+  gestoImage: {
+    width: '100%',
+    height: '100%',
+  },
+  gestoFallbackIcon: {
+    width: 60,
+    height: 60,
+    borderRadius: 12,
     backgroundColor: '#8BC5E5',
     justifyContent: 'center',
     alignItems: 'center',
   },
   gestoIconText: {
-    fontSize: 20,
+    fontSize: 24,
     fontWeight: 'bold',
     color: 'white',
   },
@@ -369,7 +483,7 @@ const styles = StyleSheet.create({
     color: '#999',
   },
   gestoActions: {
-    flexDirection: 'row',
+    flexDirection: 'row' as const,
     gap: 8,
   },
   actionButton: {
@@ -391,15 +505,10 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     padding: 24,
-    backgroundColor: '#ffffffff',
-    flexDirection: 'row',
-    justifyContent: 'space-between'
-  },
-  navContent: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    maxWidth: 400,
-    marginHorizontal: 'auto',
+    backgroundColor: '#ffffff',
+    alignItems: 'center',
+    borderTopWidth: 1,
+    borderTopColor: '#f0f0f0',
   },
   navButton: {
     padding: 12,

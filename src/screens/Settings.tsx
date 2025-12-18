@@ -6,7 +6,7 @@ import {
   StyleSheet,
   ScrollView,
 } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, CommonActions } from '@react-navigation/native';
 import {
   ArrowLeft,
   Home,
@@ -25,7 +25,12 @@ const Settings = () => {
   };
 
   const handleHome = () => {
-    (navigation as any).navigate('Home');
+    navigation.dispatch(
+      CommonActions.reset({
+        index: 0,
+        routes: [{ name: 'Home' }],
+      })
+    );
   };
 
   const handleCreateGesto = () => {

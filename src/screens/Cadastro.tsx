@@ -5,7 +5,6 @@ import {
   TextInput, 
   TouchableOpacity, 
   StyleSheet, 
-  Alert,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -25,11 +24,12 @@ import {
   Check
 } from "lucide-react-native";
 import { cadastrar, login } from "../services/auth";
-// import { useAuth } from "../contexts/AuthContext"; // REMOVA ESTA LINHA
+import { useToast } from "../../components/Toast"; 
+import { ConfirmModal } from "../../components/ConfirmModal"; 
 
 export default function CadastroScreen() {
   const navigation = useNavigation();
-  // const { signIn } = useAuth(); // REMOVA ESTA LINHA
+  const showToast = useToast();
   const [nome, setNome] = useState("");
   const [telefone, setTelefone] = useState("");
   const [dataNascimento, setDataNascimento] = useState("");
@@ -39,6 +39,13 @@ export default function CadastroScreen() {
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  
+  // Estados para o modal de confirmação
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [modalTitle, setModalTitle] = useState("");
+  const [modalMessage, setModalMessage] = useState("");
+  const [modalOnConfirm, setModalOnConfirm] = useState<() => void>(() => {});
+  const [modalConfirmText, setModalConfirmText] = useState("OK");
 
   const handleBack = () => {
     navigation.goBack();
@@ -74,11 +81,13 @@ export default function CadastroScreen() {
     return null;
   };
 
-  // Versão simplificada (recomendada)
   async function handleCadastroAutomatico() {
     const error = validateForm();
     if (error) {
-      Alert.alert("Atenção", error);
+      showToast({
+        message: error,
+        type: 'warning'
+      });
       return;
     }
 
@@ -90,26 +99,27 @@ export default function CadastroScreen() {
       // Tenta login automático
       try {
         await login(email, senha);
-        // Sucesso: navega para Home
+        showToast({
+          message: "Conta criada com sucesso!",
+          type: 'success'
+        });
         navigation.navigate("Home" as never);
       } catch (loginError) {
         // Login falhou, mas conta foi criada
-        Alert.alert(
-          "Sucesso!",
-          "Conta criada! Faça login para começar.",
-          [
-            {
-              text: "OK",
-              onPress: () => navigation.navigate("Login" as never)
-            }
-          ]
-        );
+        setModalTitle("Sucesso!");
+        setModalMessage("Conta criada! Faça login para começar.");
+        setModalConfirmText("Ir para Login");
+        setModalOnConfirm(() => () => {
+          setShowSuccessModal(false);
+          navigation.navigate("Login" as never);
+        });
+        setShowSuccessModal(true);
       }
     } catch (error: any) {
-      Alert.alert(
-        "Erro",
-        error.message || "Não foi possível completar o cadastro."
-      );
+      showToast({
+        message: error.message || "Não foi possível completar o cadastro.",
+        type: 'error'
+      });
     } finally {
       setIsLoading(false);
     }
@@ -130,250 +140,265 @@ export default function CadastroScreen() {
   };
 
   return (
-    <KeyboardAvoidingView
-      style={styles.container}
-      behavior={Platform.OS === "ios" ? "padding" : "height"}
-    >
-      {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity
-          onPress={handleBack}
-          style={styles.backButton}
-          activeOpacity={0.7}
-        >
-          <ArrowLeft size={28} color="#8BC5E5" />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Criar Conta</Text>
-      </View>
-
-      {/* Conteúdo */}
-      <ScrollView 
-        contentContainerStyle={styles.content}
-        showsVerticalScrollIndicator={false}
-        keyboardShouldPersistTaps="handled"
+    <>
+      <KeyboardAvoidingView
+        style={styles.container}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
       >
-        {/* Cabeçalho */}
-        <View style={styles.welcomeSection}>
-          <View style={styles.logoContainer}>
-            <View style={styles.logoCircle}>
-              <UserPlus size={50} color="#8BC5E5" />
-            </View>
-          </View>
-          <Text style={styles.welcomeTitle}>Junte-se a nós!</Text>
-          <Text style={styles.welcomeSubtitle}>
-            Crie sua conta e comece a usar agora mesmo
-          </Text>
-        </View>
-
-        {/* Formulário */}
-        <View style={styles.formCard}>
-          {/* Informações Pessoais */}
-          <Text style={styles.sectionTitle}>Informações Pessoais</Text>
-
-          {/* Nome */}
-          <View style={styles.inputContainer}>
-            <Text style={styles.inputLabel}>Nome Completo *</Text>
-            <View style={styles.inputWrapper}>
-              <User size={20} color="#8BC5E5" style={styles.inputIcon} />
-              <TextInput
-                style={styles.input}
-                placeholder="Seu nome completo"
-                placeholderTextColor="#999"
-                value={nome}
-                onChangeText={setNome}
-                editable={!isLoading}
-              />
-            </View>
-          </View>
-
-          {/* Telefone */}
-          <View style={styles.inputContainer}>
-            <Text style={styles.inputLabel}>Telefone *</Text>
-            <View style={styles.inputWrapper}>
-              <Phone size={20} color="#8BC5E5" style={styles.inputIcon} />
-              <TextInput
-                style={styles.input}
-                placeholder="(00) 00000-0000"
-                placeholderTextColor="#999"
-                keyboardType="phone-pad"
-                value={telefone}
-                onChangeText={(text) => setTelefone(formatPhone(text))}
-                maxLength={15}
-                editable={!isLoading}
-              />
-            </View>
-          </View>
-
-          {/* Data de Nascimento */}
-          <View style={styles.inputContainer}>
-            <Text style={styles.inputLabel}>Data de Nascimento *</Text>
-            <View style={styles.inputWrapper}>
-              <Calendar size={20} color="#8BC5E5" style={styles.inputIcon} />
-              <TextInput
-                style={styles.input}
-                placeholder="DD/MM/AAAA"
-                placeholderTextColor="#999"
-                value={dataNascimento}
-                onChangeText={(text) => setDataNascimento(formatDate(text))}
-                maxLength={10}
-                editable={!isLoading}
-              />
-            </View>
-          </View>
-
-          {/* Informações de Acesso */}
-          <Text style={[styles.sectionTitle, { marginTop: 32 }]}>Informações de Acesso</Text>
-
-          {/* Email */}
-          <View style={styles.inputContainer}>
-            <Text style={styles.inputLabel}>Email *</Text>
-            <View style={styles.inputWrapper}>
-              <Mail size={20} color="#8BC5E5" style={styles.inputIcon} />
-              <TextInput
-                style={styles.input}
-                placeholder="seu@email.com"
-                placeholderTextColor="#999"
-                autoCapitalize="none"
-                keyboardType="email-address"
-                value={email}
-                onChangeText={setEmail}
-                editable={!isLoading}
-              />
-            </View>
-            {email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) && (
-              <Text style={styles.errorText}>Email inválido</Text>
-            )}
-          </View>
-
-          {/* Senha */}
-          <View style={styles.inputContainer}>
-            <Text style={styles.inputLabel}>Senha *</Text>
-            <View style={styles.inputWrapper}>
-              <Lock size={20} color="#8BC5E5" style={styles.inputIcon} />
-              <TextInput
-                style={styles.input}
-                placeholder="Mínimo 6 caracteres"
-                placeholderTextColor="#999"
-                secureTextEntry={!showPassword}
-                value={senha}
-                onChangeText={setSenha}
-                editable={!isLoading}
-              />
-              <TouchableOpacity
-                onPress={() => setShowPassword(!showPassword)}
-                style={styles.passwordToggle}
-                activeOpacity={0.7}
-              >
-                {showPassword ? (
-                  <EyeOff size={20} color="#666" />
-                ) : (
-                  <Eye size={20} color="#666" />
-                )}
-              </TouchableOpacity>
-            </View>
-            {senha && senha.length < 6 && (
-              <Text style={styles.errorText}>Mínimo 6 caracteres</Text>
-            )}
-          </View>
-
-          {/* Confirmar Senha */}
-          <View style={styles.inputContainer}>
-            <Text style={styles.inputLabel}>Confirmar Senha *</Text>
-            <View style={styles.inputWrapper}>
-              <Lock size={20} color="#8BC5E5" style={styles.inputIcon} />
-              <TextInput
-                style={styles.input}
-                placeholder="Digite a senha novamente"
-                placeholderTextColor="#999"
-                secureTextEntry={!showConfirmPassword}
-                value={confirmarSenha}
-                onChangeText={setConfirmarSenha}
-                editable={!isLoading}
-              />
-              <TouchableOpacity
-                onPress={() => setShowConfirmPassword(!showConfirmPassword)}
-                style={styles.passwordToggle}
-                activeOpacity={0.7}
-              >
-                {showConfirmPassword ? (
-                  <EyeOff size={20} color="#666" />
-                ) : (
-                  <Eye size={20} color="#666" />
-                )}
-              </TouchableOpacity>
-            </View>
-            {confirmarSenha && senha !== confirmarSenha && (
-              <Text style={styles.errorText}>As senhas não coincidem</Text>
-            )}
-          </View>
-
-          {/* Regras de Senha */}
-          <View style={styles.passwordRules}>
-            <Text style={styles.rulesTitle}>Sua senha deve conter:</Text>
-            <View style={styles.ruleItem}>
-              <View style={[
-                styles.ruleIndicator, 
-                senha.length >= 6 && styles.ruleIndicatorValid
-              ]}>
-                {senha.length >= 6 && <Check size={12} color="white" />}
-              </View>
-              <Text style={[
-                styles.ruleText,
-                senha.length >= 6 && styles.ruleTextValid
-              ]}>Pelo menos 6 caracteres</Text>
-            </View>
-            <View style={styles.ruleItem}>
-              <View style={[
-                styles.ruleIndicator, 
-                senha === confirmarSenha && confirmarSenha && styles.ruleIndicatorValid
-              ]}>
-                {senha === confirmarSenha && confirmarSenha && <Check size={12} color="white" />}
-              </View>
-              <Text style={[
-                styles.ruleText,
-                senha === confirmarSenha && confirmarSenha && styles.ruleTextValid
-              ]}>As senhas coincidem</Text>
-            </View>
-          </View>
-
-          {/* Botão Cadastrar */}
+        {/* Header */}
+        <View style={styles.header}>
           <TouchableOpacity
-            style={[
-              styles.registerButton,
-              isLoading && styles.registerButtonDisabled,
-              !isFormValid() && styles.registerButtonDisabled
-            ]}
-            onPress={handleCadastroAutomatico}
+            onPress={handleBack}
+            style={styles.backButton}
             activeOpacity={0.7}
-            disabled={isLoading || !isFormValid()}
           >
-            {isLoading ? (
-              <ActivityIndicator color="white" />
-            ) : (
-              <>
-                <UserPlus size={20} color="white" />
-                <Text style={styles.registerButtonText}>Criar Conta e Entrar</Text>
-              </>
-            )}
+            <ArrowLeft size={28} color="#8BC5E5" />
           </TouchableOpacity>
+          <Text style={styles.headerTitle}>Criar Conta</Text>
+        </View>
 
-          {/* Já tem conta */}
-          <View style={styles.loginLink}>
-            <Text style={styles.loginText}>Já tem uma conta? </Text>
-            <TouchableOpacity onPress={navigateToLogin} disabled={isLoading}>
-              <Text style={styles.loginLinkText}>Faça login</Text>
-            </TouchableOpacity>
+        {/* Conteúdo */}
+        <ScrollView 
+          contentContainerStyle={styles.content}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+        >
+          {/* Cabeçalho */}
+          <View style={styles.welcomeSection}>
+            <View style={styles.logoContainer}>
+              <View style={styles.logoCircle}>
+                <UserPlus size={50} color="#8BC5E5" />
+              </View>
+            </View>
+            <Text style={styles.welcomeTitle}>Junte-se a nós!</Text>
+            <Text style={styles.welcomeSubtitle}>
+              Crie sua conta e comece a usar agora mesmo
+            </Text>
           </View>
-        </View>
 
-        {/* Informação adicional */}
-        <View style={styles.infoSection}>
-          <Text style={styles.infoText}>
-            Ao criar sua conta, você será conectado automaticamente.
-          </Text>
-        </View>
-      </ScrollView>
-    </KeyboardAvoidingView>
+          {/* Formulário */}
+          <View style={styles.formCard}>
+            {/* Informações Pessoais */}
+            <Text style={styles.sectionTitle}>Informações Pessoais</Text>
+
+            {/* Nome */}
+            <View style={styles.inputContainer}>
+              <Text style={styles.inputLabel}>Nome Completo *</Text>
+              <View style={styles.inputWrapper}>
+                <User size={20} color="#8BC5E5" style={styles.inputIcon} />
+                <TextInput
+                  style={styles.input}
+                  placeholder="Seu nome completo"
+                  placeholderTextColor="#999"
+                  value={nome}
+                  onChangeText={setNome}
+                  editable={!isLoading}
+                />
+              </View>
+            </View>
+
+            {/* Telefone */}
+            <View style={styles.inputContainer}>
+              <Text style={styles.inputLabel}>Telefone *</Text>
+              <View style={styles.inputWrapper}>
+                <Phone size={20} color="#8BC5E5" style={styles.inputIcon} />
+                <TextInput
+                  style={styles.input}
+                  placeholder="(00) 00000-0000"
+                  placeholderTextColor="#999"
+                  keyboardType="phone-pad"
+                  value={telefone}
+                  onChangeText={(text) => setTelefone(formatPhone(text))}
+                  maxLength={15}
+                  editable={!isLoading}
+                />
+              </View>
+            </View>
+
+            {/* Data de Nascimento */}
+            <View style={styles.inputContainer}>
+              <Text style={styles.inputLabel}>Data de Nascimento *</Text>
+              <View style={styles.inputWrapper}>
+                <Calendar size={20} color="#8BC5E5" style={styles.inputIcon} />
+                <TextInput
+                  style={styles.input}
+                  placeholder="DD/MM/AAAA"
+                  placeholderTextColor="#999"
+                  value={dataNascimento}
+                  onChangeText={(text) => setDataNascimento(formatDate(text))}
+                  maxLength={10}
+                  editable={!isLoading}
+                />
+              </View>
+            </View>
+
+            {/* Informações de Acesso */}
+            <Text style={[styles.sectionTitle, { marginTop: 32 }]}>Informações de Acesso</Text>
+
+            {/* Email */}
+            <View style={styles.inputContainer}>
+              <Text style={styles.inputLabel}>Email *</Text>
+              <View style={styles.inputWrapper}>
+                <Mail size={20} color="#8BC5E5" style={styles.inputIcon} />
+                <TextInput
+                  style={styles.input}
+                  placeholder="seu@email.com"
+                  placeholderTextColor="#999"
+                  autoCapitalize="none"
+                  keyboardType="email-address"
+                  value={email}
+                  onChangeText={setEmail}
+                  editable={!isLoading}
+                />
+              </View>
+              {email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) && (
+                <Text style={styles.errorText}>Email inválido</Text>
+              )}
+            </View>
+
+            {/* Senha */}
+            <View style={styles.inputContainer}>
+              <Text style={styles.inputLabel}>Senha *</Text>
+              <View style={styles.inputWrapper}>
+                <Lock size={20} color="#8BC5E5" style={styles.inputIcon} />
+                <TextInput
+                  style={styles.input}
+                  placeholder="Mínimo 6 caracteres"
+                  placeholderTextColor="#999"
+                  secureTextEntry={!showPassword}
+                  value={senha}
+                  onChangeText={setSenha}
+                  editable={!isLoading}
+                />
+                <TouchableOpacity
+                  onPress={() => setShowPassword(!showPassword)}
+                  style={styles.passwordToggle}
+                  activeOpacity={0.7}
+                >
+                  {showPassword ? (
+                    <EyeOff size={20} color="#666" />
+                  ) : (
+                    <Eye size={20} color="#666" />
+                  )}
+                </TouchableOpacity>
+              </View>
+              {senha && senha.length < 6 && (
+                <Text style={styles.errorText}>Mínimo 6 caracteres</Text>
+              )}
+            </View>
+
+            {/* Confirmar Senha */}
+            <View style={styles.inputContainer}>
+              <Text style={styles.inputLabel}>Confirmar Senha *</Text>
+              <View style={styles.inputWrapper}>
+                <Lock size={20} color="#8BC5E5" style={styles.inputIcon} />
+                <TextInput
+                  style={styles.input}
+                  placeholder="Digite a senha novamente"
+                  placeholderTextColor="#999"
+                  secureTextEntry={!showConfirmPassword}
+                  value={confirmarSenha}
+                  onChangeText={setConfirmarSenha}
+                  editable={!isLoading}
+                />
+                <TouchableOpacity
+                  onPress={() => setShowConfirmPassword(!showConfirmPassword)}
+                  style={styles.passwordToggle}
+                  activeOpacity={0.7}
+                >
+                  {showConfirmPassword ? (
+                    <EyeOff size={20} color="#666" />
+                  ) : (
+                    <Eye size={20} color="#666" />
+                  )}
+                </TouchableOpacity>
+              </View>
+              {confirmarSenha && senha !== confirmarSenha && (
+                <Text style={styles.errorText}>As senhas não coincidem</Text>
+              )}
+            </View>
+
+            {/* Regras de Senha */}
+            <View style={styles.passwordRules}>
+              <Text style={styles.rulesTitle}>Sua senha deve conter:</Text>
+              <View style={styles.ruleItem}>
+                <View style={[
+                  styles.ruleIndicator, 
+                  senha.length >= 6 && styles.ruleIndicatorValid
+                ]}>
+                  {senha.length >= 6 && <Check size={12} color="white" />}
+                </View>
+                <Text style={[
+                  styles.ruleText,
+                  senha.length >= 6 && styles.ruleTextValid
+                ]}>Pelo menos 6 caracteres</Text>
+              </View>
+              <View style={styles.ruleItem}>
+                <View style={[
+                  styles.ruleIndicator, 
+                  senha === confirmarSenha && confirmarSenha && styles.ruleIndicatorValid
+                ]}>
+                  {senha === confirmarSenha && confirmarSenha && <Check size={12} color="white" />}
+                </View>
+                <Text style={[
+                  styles.ruleText,
+                  senha === confirmarSenha && confirmarSenha && styles.ruleTextValid
+                ]}>As senhas coincidem</Text>
+              </View>
+            </View>
+
+            {/* Botão Cadastrar */}
+            <TouchableOpacity
+              style={[
+                styles.registerButton,
+                isLoading && styles.registerButtonDisabled,
+                !isFormValid() && styles.registerButtonDisabled
+              ]}
+              onPress={handleCadastroAutomatico}
+              activeOpacity={0.7}
+              disabled={isLoading || !isFormValid()}
+            >
+              {isLoading ? (
+                <ActivityIndicator color="white" />
+              ) : (
+                <>
+                  <UserPlus size={20} color="white" />
+                  <Text style={styles.registerButtonText}>Criar Conta e Entrar</Text>
+                </>
+              )}
+            </TouchableOpacity>
+
+            {/* Já tem conta */}
+            <View style={styles.loginLink}>
+              <Text style={styles.loginText}>Já tem uma conta? </Text>
+              <TouchableOpacity onPress={navigateToLogin} disabled={isLoading}>
+                <Text style={styles.loginLinkText}>Faça login</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+
+          {/* Informação adicional */}
+          <View style={styles.infoSection}>
+            <Text style={styles.infoText}>
+              Ao criar sua conta, você será conectado automaticamente.
+            </Text>
+          </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
+
+      <ConfirmModal
+        visible={showSuccessModal}
+        title={modalTitle}
+        message={modalMessage}
+        confirmText={modalConfirmText}
+        cancelText=""
+        onConfirm={() => {
+          modalOnConfirm();
+          setShowSuccessModal(false);
+        }}
+        onCancel={() => setShowSuccessModal(false)}
+      />
+    </>
   );
 }
 
