@@ -5,7 +5,7 @@ import {
   TouchableOpacity,
   StyleSheet,
 } from 'react-native';
-import { useRoute, useNavigation } from '@react-navigation/native';
+import { useRoute, useNavigation, CommonActions } from '@react-navigation/native';
 import { Home, ArrowLeft } from 'lucide-react-native';
 
 const NotFound = () => {
@@ -19,14 +19,24 @@ const NotFound = () => {
 
   const handleGoHome = () => {
     // Solução para TypeScript
-    (navigation as any).navigate('Home');
+    navigation.dispatch(
+      CommonActions.reset({
+        index: 0,
+        routes: [{ name: 'Home' }],
+      })
+    );
   };
 
   const handleGoBack = () => {
     if (navigation.canGoBack()) {
       navigation.goBack();
     } else {
-      (navigation as any).navigate('Home');
+      navigation.dispatch(
+        CommonActions.reset({
+          index: 0,
+          routes: [{ name: 'Home' }],
+        })
+      );
     }
   };
 
@@ -36,13 +46,13 @@ const NotFound = () => {
         <View style={styles.errorIcon}>
           <Text style={styles.errorIconText}>!</Text>
         </View>
-        
+
         <Text style={styles.errorCode}>404</Text>
         <Text style={styles.errorTitle}>Página não encontrada</Text>
         <Text style={styles.errorDescription}>
           A rota que você está tentando acessar não existe ou foi movida.
         </Text>
-        
+
         <View style={styles.buttonContainer}>
           <TouchableOpacity
             onPress={handleGoBack}
@@ -52,7 +62,7 @@ const NotFound = () => {
             <ArrowLeft size={20} color="#8BC5E5" style={styles.buttonIcon} />
             <Text style={styles.secondaryButtonText}>Voltar</Text>
           </TouchableOpacity>
-          
+
           <TouchableOpacity
             onPress={handleGoHome}
             style={[styles.button, styles.primaryButton]}

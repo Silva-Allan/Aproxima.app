@@ -1,5 +1,5 @@
-// components/ItemCard.tsx
-import React from 'react';
+// src/components/ItemCard.tsx
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   TouchableOpacity,
   View,
@@ -7,56 +7,157 @@ import {
   StyleSheet,
   Dimensions,
   Platform,
+  Image,
+  ActivityIndicator,
 } from 'react-native';
 import * as Speech from 'expo-speech';
+import * as LucideIcons from 'lucide-react-native';
 
-// Use qualquer tipo que representa um componente React
+type LucideIconComponent = React.ComponentType<{
+  size?: number;
+  color?: string;
+  strokeWidth?: number;
+}>;
+
 interface ItemCardProps {
-  icon: React.ComponentType<any>;
+  icon?: LucideIconComponent;
   label: string;
   onSelect: () => void;
+  imagemUrl?: string;
 }
 
-/**
- * Card de item - Estilo Figma
- * Card azul claro com ícone branco e texto preto
- */
-const ItemCard = ({ icon: Icon, label, onSelect }: ItemCardProps) => {
-  const handlePress = async () => {
-    try {
-      // Text-to-Speech com Expo Speech
-      Speech.speak(label, {
-        language: 'pt-BR',
-        pitch: 1.0,
-        rate: 0.9,
-      });
-    } catch (error) {
-      console.error('Erro ao falar texto:', error);
-    }
-    
+const ItemCard = ({ icon: Icon, label, onSelect, imagemUrl }: ItemCardProps) => {
+  const [imageLoading, setImageLoading] = useState(true);
+  const [imageError, setImageError] = useState(false);
+
+  const screenWidth = Dimensions.get('window').width;
+  const cardSize = (screenWidth - 48) / 2;
+
+  const handlePress = () => {
+    Speech.speak(label, {
+      language: 'pt-BR',
+      pitch: 1.0,
+      rate: 0.9,
+    });
     onSelect();
   };
 
-  const screenWidth = Dimensions.get('window').width;
-  const cardSize = (screenWidth - 48) / 2; // 24px padding de cada lado
+  const getContentType = () => {
+    if (!imagemUrl) return 'icon';
+    if (imagemUrl.startsWith('icon://')) return 'lucide-icon';
+    if (
+      imagemUrl.startsWith('http') ||
+      imagemUrl.startsWith('file://') ||
+      imagemUrl.startsWith('content://')
+    ) {
+      return 'image';
+    }
+    return 'icon';
+  };
+
+  const contentType = getContentType();
+
+  const cleanImageUrl = useMemo(() => {
+    if (contentType !== 'image' || !imagemUrl) return null;
+
+    let url = imagemUrl.split('?')[0];
+
+    if (url.startsWith('http://')) {
+      url = url.replace('http://', 'https://');
+    }
+
+    return url;
+  }, [imagemUrl, contentType]);
+
+  useEffect(() => {
+    if (contentType === 'image') {
+      setImageLoading(true);
+      setImageError(false);
+    }
+  }, [cleanImageUrl, contentType]);
+
+  const getLucideIcon = (name: string): LucideIconComponent => {
+    const icons: Record<string, LucideIconComponent> = {
+      Smile: LucideIcons.Smile,
+      Heart: LucideIcons.Heart,
+      Hand: LucideIcons.Hand,
+      Bird: LucideIcons.Bird,
+      Cat: LucideIcons.Cat,
+      Dog: LucideIcons.Dog,
+      default: LucideIcons.Hand,
+    };
+
+    return icons[name] || icons.default;
+  };
+
+  const renderContent = () => {
+    switch (contentType) {
+      case 'lucide-icon': {
+        const iconName = imagemUrl!.replace('icon://', '');
+        const LucideIcon = getLucideIcon(iconName);
+        return <LucideIcon size={56} color="white" strokeWidth={2.5} />;
+      }
+
+      case 'image': {
+        if (!cleanImageUrl) {
+          return <LucideIcons.Image size={56} color="white" />;
+        }
+
+        return (
+          <>
+            {imageLoading && (
+              <View style={styles.loading}>
+                <ActivityIndicator size="large" color="white" />
+              </View>
+            )}
+
+            <Image
+              source={{ uri: cleanImageUrl }}
+              style={[styles.image, { opacity: imageLoading ? 0 : 1 }]}
+              resizeMode="contain"
+              fadeDuration={0}
+              onLoad={() => {
+                setImageLoading(false);
+                setImageError(false);
+              }}
+              onError={() => {
+                setImageLoading(false);
+                setImageError(true);
+              }}
+            />
+
+            {imageError && (
+              <View style={styles.error}>
+                <LucideIcons.ImageOff size={56} color="white" />
+              </View>
+            )}
+          </>
+        );
+      }
+
+      default:
+        return Icon ? (
+          <Icon size={56} color="white" strokeWidth={2.5} />
+        ) : (
+          <Text style={styles.fallback}>{label[0]}</Text>
+        );
+    }
+  };
 
   return (
     <TouchableOpacity
       onPress={handlePress}
+      activeOpacity={0.7}
       style={[
         styles.container,
-        { 
-          width: cardSize, 
-          height: cardSize,
-          backgroundColor: '#8BC5E5' 
-        }
+        { width: cardSize, height: cardSize, backgroundColor: '#8BC5E5' },
       ]}
-      activeOpacity={0.7}
-      accessibilityLabel={label}
     >
       <View style={styles.content}>
-        <Icon size={56} color="white" strokeWidth={2.5} />
-        <Text style={styles.label}>{label.toUpperCase()}</Text>
+        <View style={styles.imageContainer}>{renderContent()}</View>
+        <Text style={styles.label} numberOfLines={2}>
+          {label.toUpperCase()}
+        </Text>
       </View>
     </TouchableOpacity>
   );
@@ -65,30 +166,47 @@ const ItemCard = ({ icon: Icon, label, onSelect }: ItemCardProps) => {
 const styles = StyleSheet.create({
   container: {
     borderRadius: 24,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 3.84,
-    elevation: 5,
     marginBottom: 16,
-    justifyContent: 'center',
-    alignItems: 'center',
+    overflow: 'hidden',
   },
   content: {
     alignItems: 'center',
     justifyContent: 'center',
+    padding: 16,
     gap: 12,
-    padding: 24,
+    width: '100%',
+    height: '100%',
+  },
+  imageContainer: {
+    width: 120,
+    height: 120,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    overflow: 'hidden',
+  },
+  image: {
+    width: '100%',
+    height: '100%',
+  },
+  loading: {
+    ...StyleSheet.absoluteFillObject,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  error: {
+    ...StyleSheet.absoluteFillObject,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  fallback: {
+    fontSize: 32,
+    color: 'white',
+    fontWeight: 'bold',
   },
   label: {
     fontSize: 14,
-    fontFamily: Platform.select({
-      ios: 'System',
-      android: 'sans-serif',
-    }),
     fontWeight: '900',
     color: '#000',
     textAlign: 'center',
