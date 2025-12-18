@@ -366,7 +366,7 @@ const styles = StyleSheet.create({
   },
   categoryHeader: {
     backgroundColor: 'white',
-    paddingTop: 50,
+    paddingTop: 30,
     paddingBottom: 20,
     paddingHorizontal: 16,
     borderBottomLeftRadius: 24,

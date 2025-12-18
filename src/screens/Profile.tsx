@@ -722,7 +722,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingTop: 60,
+    paddingTop: 30,
     paddingBottom: 20,
     paddingHorizontal: 24,
     backgroundColor: 'white',

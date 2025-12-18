@@ -28,10 +28,10 @@ import { criarGesto, atualizarGesto } from "../services/gestos";
 import { useAuth } from "../contexts/AuthContext";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import { UploadService } from "../services/upload";
-import { categoryData, Category, CategoryItem } from "./Categories";
+import { categoryData, Category } from "./Categories";
 import { allIconsList, iconCategories, IconName, getIconComponent } from "../../utils/icons";
 import { useToast } from '../../components/Toast';
-import { ConfirmModal } from '../../components/ConfirmModal'; 
+import { ConfirmModal } from '../../components/ConfirmModal';
 import { ActionSheetModal } from '../../components/ActionSheetModal';
 
 type IconCategoryKey = keyof typeof iconCategories;
@@ -61,15 +61,13 @@ export default function CadastrarGesto() {
   const [selectedIconCategory, setSelectedIconCategory] = useState<IconCategoryKey | null>(null);
   const [selectedIconName, setSelectedIconName] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
-  
+
   // Estados para os modais
   const [showImageOptionsModal, setShowImageOptionsModal] = useState(false);
   const [showRemoveImageModal, setShowRemoveImageModal] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [successModalTitle, setSuccessModalTitle] = useState("");
   const [successModalMessage, setSuccessModalMessage] = useState("");
-  const [showErrorToast, setShowErrorToast] = useState(false);
-  const [errorMessage, setErrorMessage] = useState("");
 
   const screenWidth = Dimensions.get('window').width;
   const iconSize = (screenWidth - 80) / 4;
@@ -103,7 +101,7 @@ export default function CadastrarGesto() {
       const imageUri = await UploadService.pickImageFromGallery();
       if (imageUri) {
         setImagemUri(imageUri);
-        setSelectedIconName(null); // Limpar ícone selecionado se escolher imagem
+        setSelectedIconName(null);
         setShowImageOptionsModal(false);
       }
     } catch (error: any) {
@@ -123,7 +121,7 @@ export default function CadastrarGesto() {
       const imageUri = await UploadService.takePhotoWithCamera();
       if (imageUri) {
         setImagemUri(imageUri);
-        setSelectedIconName(null); // Limpar ícone selecionado se tirar foto
+        setSelectedIconName(null);
         setShowImageOptionsModal(false);
       }
     } catch (error: any) {
@@ -144,7 +142,6 @@ export default function CadastrarGesto() {
   };
 
   const handleIconSelected = (iconName: string) => {
-    // Usamos um esquema de URI especial para identificar ícones
     const iconUri = `icon://${iconName}`;
     setImagemUri(iconUri);
     setSelectedIconName(iconName);
@@ -184,7 +181,6 @@ export default function CadastrarGesto() {
     </TouchableOpacity>
   );
 
-  // Filtrar ícones baseado na pesquisa e categoria
   const filteredIcons = allIconsList.filter(icon => {
     const matchesSearch = iconSearch === '' ||
       icon.name.toLowerCase().includes(iconSearch.toLowerCase());
@@ -297,7 +293,7 @@ export default function CadastrarGesto() {
     );
   };
 
-  // Função handleSalvar atualizada
+  // FUNÇÃO PRINCIPAL CORRIGIDA
   async function handleSalvar() {
     if (!nome.trim()) {
       showToast({
@@ -324,32 +320,36 @@ export default function CadastrarGesto() {
     }
 
     setIsLoading(true);
+    
     try {
       let imagemUrl = "";
       let iconeName = "";
       let iconeLabel = "";
 
       console.log("🔄 Iniciando salvamento do gesto...");
-      console.log("📁 imagemUri:", imagemUri);
-      console.log("📊 gestoParaEditar?.imagem_url:", gestoParaEditar?.imagem_url);
+      console.log("📁 imagemUri:", imagemUri?.substring(0, 50));
 
-      // Se for um ícone nativo (começa com icon://)
+      // 1. Se for um ícone nativo (começa com icon://)
       if (imagemUri.startsWith('icon://')) {
         const iconName = imagemUri.replace('icon://', '');
-        imagemUrl = imagemUri; // Mantemos a URI especial
+        imagemUrl = imagemUri;
         iconeName = iconName;
         iconeLabel = iconName;
         console.log("✅ É um ícone:", iconName);
       }
-      // Se for uma imagem LOCAL (nova ou para upload)
-      else if (imagemUri.startsWith('file://') || imagemUri.startsWith('content://')) {
-        console.log("📤 É uma imagem local, fazendo upload...");
+      // 2. Se já for uma URL remota (HTTPS/HTTP)
+      else if (imagemUri.startsWith('https://') || imagemUri.startsWith('http://')) {
+        console.log("🔗 É uma URL remota, mantendo:", imagemUri?.substring(0, 100));
+        imagemUrl = imagemUri;
+      }
+      // 3. Para qualquer outro tipo (base64, blob, file://) - FAZ UPLOAD
+      else {
+        console.log(`📤 Fazendo upload de imagem...`);
         setIsUploading(true);
         try {
           const uploadResult = await UploadService.uploadGestoImage(
             user?.id || '',
-            imagemUri,
-            gestoParaEditar?.id
+            imagemUri
           );
 
           console.log("📊 Resultado do upload:", uploadResult);
@@ -366,23 +366,6 @@ export default function CadastrarGesto() {
         } finally {
           setIsUploading(false);
         }
-      }
-      // Se já for uma URL remota (HTTPS) - mantém como está
-      else if (imagemUri.startsWith('https://') || imagemUri.startsWith('http://')) {
-        console.log("🔗 É uma URL remota, mantendo:", imagemUri);
-        imagemUrl = imagemUri;
-
-        // Verificar se é um ícone salvo anteriormente
-        if (imagemUri.startsWith('icon://')) {
-          const iconName = imagemUri.replace('icon://', '');
-          iconeName = iconName;
-          iconeLabel = iconName;
-        }
-      }
-      // Fallback - erro
-      else {
-        console.error("❌ Tipo de imagem não suportado:", imagemUri);
-        throw new Error("Tipo de imagem não suportado");
       }
 
       console.log("💾 Dados para salvar:", {
@@ -405,12 +388,10 @@ export default function CadastrarGesto() {
           imagemUrl: imagemUrl
         });
 
-        // Usando modal de sucesso
         setSuccessModalTitle("Sucesso!");
         setSuccessModalMessage("Gesto atualizado com sucesso!");
         setShowSuccessModal(true);
       } else {
-        // Criar novo gesto
         console.log("🆕 Criando novo gesto");
         await criarGesto({
           nome: nome.trim(),
@@ -421,7 +402,6 @@ export default function CadastrarGesto() {
           imagemUrl: imagemUrl
         });
 
-        // Usando modal de sucesso
         setSuccessModalTitle("Sucesso!");
         setSuccessModalMessage("Gesto criado com sucesso!");
         setShowSuccessModal(true);
@@ -441,7 +421,6 @@ export default function CadastrarGesto() {
   }
 
   const renderImageSection = () => {
-    // Se for um ícone nativo, mostrar o ícone
     if (imagemUri?.startsWith('icon://')) {
       const iconName = imagemUri.replace('icon://', '') as IconName;
       const IconComponent = getIconComponent(iconName);
@@ -479,7 +458,6 @@ export default function CadastrarGesto() {
       );
     }
 
-    // Se for uma imagem normal
     return (
       <View key="image-section-normal" style={styles.imageSection}>
         <Text style={styles.sectionTitle}>Imagem do Gesto *</Text>
