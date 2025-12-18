@@ -176,7 +176,7 @@ const styles = StyleSheet.create({
     gap: 12,
     width: '100%',
     height: '100%',
-    minHeight: 120,
+    minHeight: 200,
   },
   imageContainer: {
     width: 120,
