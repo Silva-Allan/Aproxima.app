@@ -119,7 +119,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'flex-start',
     gap: 16,
-    paddingTop: 30,
+    paddingTop: 20,
     paddingBottom: 20,
     paddingHorizontal: 24,
     backgroundColor: 'white',
