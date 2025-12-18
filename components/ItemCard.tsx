@@ -1,4 +1,4 @@
-// src/components/ItemCard.tsx
+// src/components/ItemCard.tsx - VERSÃO AJUSTADA
 import React, { useState, useEffect, useMemo } from 'react';
 import {
   TouchableOpacity,
@@ -6,7 +6,6 @@ import {
   Text,
   StyleSheet,
   Dimensions,
-  Platform,
   Image,
   ActivityIndicator,
 } from 'react-native';
@@ -24,14 +23,64 @@ interface ItemCardProps {
   label: string;
   onSelect: () => void;
   imagemUrl?: string;
+  size?: 'small' | 'medium' | 'large';
 }
 
-const ItemCard = ({ icon: Icon, label, onSelect, imagemUrl }: ItemCardProps) => {
+const ItemCard = ({ 
+  icon: Icon, 
+  label, 
+  onSelect, 
+  imagemUrl, 
+  size = 'medium' 
+}: ItemCardProps) => {
   const [imageLoading, setImageLoading] = useState(true);
   const [imageError, setImageError] = useState(false);
 
   const screenWidth = Dimensions.get('window').width;
-  const cardSize = (screenWidth - 48) / 2;
+  const screenHeight = Dimensions.get('window').height;
+
+  // Tamanhos dinâmicos baseados no tamanho da tela
+  const getCardDimensions = () => {
+    const isLandscape = screenWidth > screenHeight;
+    
+    switch (size) {
+      case 'small':
+        return {
+          cardSize: (screenWidth - 48) / 4, // 4 colunas
+          iconSize: 36,
+          labelFontSize: 10,
+          imageContainerSize: 60,
+        };
+      case 'large':
+        return {
+          cardSize: (screenWidth - 32), // Largura total menos padding
+          iconSize: 72,
+          labelFontSize: 18,
+          imageContainerSize: 140,
+        };
+      case 'medium':
+      default:
+        return isLandscape 
+          ? {
+              cardSize: (screenWidth - 64) / 4, // 4 colunas em landscape
+              iconSize: 48,
+              labelFontSize: 12,
+              imageContainerSize: 80,
+            }
+          : {
+              cardSize: (screenWidth - 48) / 2, // 2 colunas em portrait
+              iconSize: 56,
+              labelFontSize: 14,
+              imageContainerSize: 100,
+            };
+    }
+  };
+
+  const dimensions = getCardDimensions();
+  const cardSize = dimensions.cardSize;
+  const iconSize = dimensions.iconSize;
+  const labelFontSize = dimensions.labelFontSize;
+  const imageContainerSize = dimensions.imageContainerSize;
 
   const handlePress = () => {
     Speech.speak(label, {
@@ -48,7 +97,8 @@ const ItemCard = ({ icon: Icon, label, onSelect, imagemUrl }: ItemCardProps) => 
     if (
       imagemUrl.startsWith('http') ||
       imagemUrl.startsWith('file://') ||
-      imagemUrl.startsWith('content://')
+      imagemUrl.startsWith('content://') ||
+      imagemUrl.startsWith('data:')
     ) {
       return 'image';
     }
@@ -84,7 +134,65 @@ const ItemCard = ({ icon: Icon, label, onSelect, imagemUrl }: ItemCardProps) => 
       Bird: LucideIcons.Bird,
       Cat: LucideIcons.Cat,
       Dog: LucideIcons.Dog,
-      default: LucideIcons.Hand,
+      Frown: LucideIcons.Frown,
+      Laugh: LucideIcons.Laugh,
+      Angry: LucideIcons.Angry,
+      Meh: LucideIcons.Meh,
+      ThumbsUp: LucideIcons.ThumbsUp,
+      Eye: LucideIcons.Eye,
+      Ear: LucideIcons.Ear,
+      Check: LucideIcons.Check,
+      X: LucideIcons.X,
+      Beef: LucideIcons.Beef,
+      Apple: LucideIcons.Apple,
+      Carrot: LucideIcons.Carrot,
+      Banana: LucideIcons.Banana,
+      Egg: LucideIcons.Egg,
+      Milk: LucideIcons.Milk,
+      Pizza: LucideIcons.Pizza,
+      IceCream: LucideIcons.IceCream,
+      Droplets: LucideIcons.Droplets,
+      Utensils: LucideIcons.Utensils,
+      Sun: LucideIcons.Sun,
+      Moon: LucideIcons.Moon,
+      Wind: LucideIcons.Wind,
+      Thermometer: LucideIcons.Thermometer,
+      Zap: LucideIcons.Zap,
+      Cloud: LucideIcons.Cloud,
+      Bed: LucideIcons.Bed,
+      Toilet: LucideIcons.Toilet,
+      Bath: LucideIcons.Bath,
+      School: LucideIcons.School,
+      Car: LucideIcons.Car,
+      House: LucideIcons.House,
+      Store: LucideIcons.Store,
+      Building: LucideIcons.Building,
+      MapPin: LucideIcons.MapPin,
+      Church: LucideIcons.Church,
+      Tv: LucideIcons.Tv,
+      Sofa: LucideIcons.Sofa,
+      Book: LucideIcons.Book,
+      Pen: LucideIcons.Pen,
+      Phone: LucideIcons.Phone,
+      Music: LucideIcons.Music,
+      Gamepad2: LucideIcons.Gamepad2,
+      Bike: LucideIcons.Bike,
+      Bus: LucideIcons.Bus,
+      Train: LucideIcons.Train,
+      Plane: LucideIcons.Plane,
+      Pencil: LucideIcons.Pencil,
+      Notebook: LucideIcons.Notebook,
+      Clipboard: LucideIcons.Clipboard,
+      GraduationCap: LucideIcons.GraduationCap,
+      Calculator: LucideIcons.Calculator,
+      Globe: LucideIcons.Globe,
+      Ruler: LucideIcons.Ruler,
+      Scissors: LucideIcons.Scissors,
+      Palette: LucideIcons.Palette,
+      Baby: LucideIcons.Baby,
+      Volume2: LucideIcons.Volume2,
+      Home: LucideIcons.Home,
+      default: LucideIcons.HelpCircle,
     };
 
     return icons[name] || icons.default;
@@ -95,25 +203,32 @@ const ItemCard = ({ icon: Icon, label, onSelect, imagemUrl }: ItemCardProps) => 
       case 'lucide-icon': {
         const iconName = imagemUrl!.replace('icon://', '');
         const LucideIcon = getLucideIcon(iconName);
-        return <LucideIcon size={56} color="white" strokeWidth={2.5} />;
+        return <LucideIcon size={iconSize} color="white" strokeWidth={2.5} />;
       }
 
       case 'image': {
         if (!cleanImageUrl) {
-          return <LucideIcons.Image size={56} color="white" />;
+          return <LucideIcons.Image size={iconSize} color="white" />;
         }
 
         return (
           <>
             {imageLoading && (
               <View style={styles.loading}>
-                <ActivityIndicator size="large" color="white" />
+                <ActivityIndicator size="small" color="white" />
               </View>
             )}
 
             <Image
               source={{ uri: cleanImageUrl }}
-              style={[styles.image, { opacity: imageLoading ? 0 : 1 }]}
+              style={[
+                styles.image, 
+                { 
+                  opacity: imageLoading ? 0 : 1,
+                  width: imageContainerSize,
+                  height: imageContainerSize,
+                }
+              ]}
               resizeMode="contain"
               fadeDuration={0}
               onLoad={() => {
@@ -128,7 +243,7 @@ const ItemCard = ({ icon: Icon, label, onSelect, imagemUrl }: ItemCardProps) => 
 
             {imageError && (
               <View style={styles.error}>
-                <LucideIcons.ImageOff size={56} color="white" />
+                <LucideIcons.ImageOff size={iconSize} color="white" />
               </View>
             )}
           </>
@@ -137,9 +252,11 @@ const ItemCard = ({ icon: Icon, label, onSelect, imagemUrl }: ItemCardProps) => 
 
       default:
         return Icon ? (
-          <Icon size={56} color="white" strokeWidth={2.5} />
+          <Icon size={iconSize} color="white" strokeWidth={2.5} />
         ) : (
-          <Text style={styles.fallback}>{label[0]}</Text>
+          <Text style={[styles.fallback, { fontSize: iconSize * 0.7 }]}>
+            {label[0]}
+          </Text>
         );
     }
   };
@@ -150,12 +267,35 @@ const ItemCard = ({ icon: Icon, label, onSelect, imagemUrl }: ItemCardProps) => 
       activeOpacity={0.7}
       style={[
         styles.container,
-        { width: cardSize, height: cardSize, backgroundColor: '#8BC5E5' },
+        { 
+          width: cardSize, 
+          height: cardSize,
+          backgroundColor: '#8BC5E5',
+        },
       ]}
     >
       <View style={styles.content}>
-        <View style={styles.imageContainer}>{renderContent()}</View>
-        <Text style={styles.label} numberOfLines={2}>
+        <View style={[
+          styles.imageContainer,
+          { 
+            width: imageContainerSize, 
+            height: imageContainerSize,
+            borderRadius: imageContainerSize * 0.2,
+          }
+        ]}>
+          {renderContent()}
+        </View>
+        <Text style={[
+          styles.label, 
+          { 
+            fontSize: labelFontSize,
+            lineHeight: labelFontSize * 1.2,
+          }
+        ]} 
+        numberOfLines={2}
+        adjustsFontSizeToFit
+        minimumFontScale={0.8}
+        >
           {label.toUpperCase()}
         </Text>
       </View>
@@ -165,27 +305,30 @@ const ItemCard = ({ icon: Icon, label, onSelect, imagemUrl }: ItemCardProps) => 
 
 const styles = StyleSheet.create({
   container: {
-    borderRadius: 24,
-    marginBottom: 16,
+    borderRadius: 20,
+    margin: 6,
     overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
   content: {
     alignItems: 'center',
     justifyContent: 'center',
-    padding: 16,
-    gap: 12,
+    padding: 12,
+    gap: 8,
     width: '100%',
     height: '100%',
-    minHeight: 280,
   },
   imageContainer: {
-    paddingTop: 0,
-    width: 120,
-    height: 120,
-    borderRadius: 20,
-    backgroundColor: 'rgba(255,255,255,0.2)',
     justifyContent: 'center',
     alignItems: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
     overflow: 'hidden',
   },
   image: {
@@ -196,22 +339,24 @@ const styles = StyleSheet.create({
     ...StyleSheet.absoluteFillObject,
     justifyContent: 'center',
     alignItems: 'center',
+    backgroundColor: 'rgba(139, 197, 229, 0.3)',
   },
   error: {
     ...StyleSheet.absoluteFillObject,
     justifyContent: 'center',
     alignItems: 'center',
+    backgroundColor: 'rgba(255, 68, 68, 0.1)',
   },
   fallback: {
-    fontSize: 32,
     color: 'white',
     fontWeight: 'bold',
   },
   label: {
-    fontSize: 14,
-    fontWeight: '900',
+    fontWeight: '800',
     color: '#000',
     textAlign: 'center',
+    flexShrink: 1,
+    marginTop: 4,
   },
 });
 
